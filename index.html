@@ -358,7 +358,20 @@ a{color:var(--color-accent-700);text-decoration:none;} a:hover{color:var(--color
                 <span style="font:800 15px var(--font-heading);width:38px;text-align:right;">{{ h.after }}</span>
               </div>
             </sc-for>
-            <div style="height:32px;"></div>
+            <div style="padding:16px 20px 32px;border-top:2px solid var(--color-divider);">
+              <sc-if value="{{ clearHistOpen }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;flex-direction:column;gap:10px;">
+                  <div style="border:2px solid var(--color-accent);padding:10px 12px;font-size:13px;color:var(--color-accent-700);">This deletes {{ detailName }}'s handicap history. The current handicap is kept as the single starting entry.</div>
+                  <div style="display:flex;gap:10px;">
+                    <button class="btn btn-primary" onClick="{{ clearHist }}" style="min-height:44px;">Yes, clear history</button>
+                    <button class="btn btn-ghost" onClick="{{ closeClearHist }}" style="min-height:44px;">Cancel</button>
+                  </div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ clearHistClosed }}" hint-placeholder-val="{{ true }}">
+                <button class="btn btn-secondary" onClick="{{ openClearHist }}" style="min-height:44px;">Clear handicap history</button>
+              </sc-if>
+            </div>
           </sc-if>
 
           <!-- NEW MATCH · SETUP -->
@@ -620,7 +633,7 @@ class Component extends DCLogic {
     tab: 'roster', sel: null, addOpen: false, addName: '', addHcp: '',
     mType: 'singles', a1: '', a2: '', b1: '', b2: '', phase: 'setup',
     sets: [[-1, -1], [-1, -1], [-1, -1]], scoreErr: '', result: null,
-    editOpen: false, editVal: '', editErr: '', clearOpen: false,
+    editOpen: false, editVal: '', editErr: '', clearOpen: false, clearHistOpen: false,
   };
   startFor(r) { return r === 0 ? 'Level' : r === 10 ? '15\u2013love' : r === 20 ? '30\u2013love' : r === 90 ? '30 / minus 30' : '30 / minus 15'; }
   restrFor(r) { return this.CODES.filter(c => r >= c.from); }
@@ -786,7 +799,16 @@ class Component extends DCLogic {
       showRubric: st.tab === 'new' && st.phase === 'rubric',
       showMatches: st.tab === 'log', showBoard: st.tab === 'board',
       detailName, detailHcp, detailRec, detailBand, detailProv, detailHist,
-      closeDetail: () => set({ sel: null, editOpen: false, editErr: '' }),
+      closeDetail: () => set({ sel: null, editOpen: false, editErr: '', clearHistOpen: false }),
+      clearHistOpen: st.clearHistOpen, clearHistClosed: !st.clearHistOpen,
+      openClearHist: () => set({ clearHistOpen: true }),
+      closeClearHist: () => set({ clearHistOpen: false }),
+      clearHist: () => {
+        const p = this.pById(this.state.sel); if (!p) return;
+        const today = new Date().toISOString().slice(0, 10);
+        const nd = { ...data, players: data.players.map(x => x.id === p.id ? { ...x, hist: [{ d: today, label: 'History cleared — handicap carried forward', delta: 0, after: x.hcp }] } : x) };
+        this.persist(nd); set({ data: nd, clearHistOpen: false });
+      },
       editOpen: st.editOpen, editClosed: !st.editOpen, editVal: st.editVal,
       editErr: st.editErr, editErrShow: !!st.editErr,
       openEdit: () => { const p = this.pById(this.state.sel); set({ editOpen: true, editVal: p ? p.hcp.toFixed(1) : '', editErr: '' }); },
