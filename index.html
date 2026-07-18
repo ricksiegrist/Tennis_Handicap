@@ -10,7 +10,6 @@
 <helmet>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 
-
 <style>
 /* Modernist — design-system tokens and component classes. This file is the source of truth for the system's look; retune it here and see readme.md. */
 @import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&display=swap');
@@ -533,7 +532,20 @@ a{color:var(--color-accent-700);text-decoration:none;} a:hover{color:var(--color
                 <div style="display:flex;justify-content:space-between;gap:10px;"><span style="font:700 14px var(--font-heading);color:var(--color-accent-700);">{{ m.score }}</span><span style="font-size:12px;color:var(--color-neutral-700);">{{ m.delta }}</span></div>
               </div>
             </sc-for>
-            <div style="height:32px;"></div>
+            <div style="padding:16px 20px 32px;border-top:2px solid var(--color-divider);">
+              <sc-if value="{{ clearOpen }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;flex-direction:column;gap:10px;">
+                  <div style="border:2px solid var(--color-accent);padding:10px 12px;font-size:13px;color:var(--color-accent-700);">This deletes all recorded matches. Handicaps keep their current values.</div>
+                  <div style="display:flex;gap:10px;">
+                    <button class="btn btn-primary" onClick="{{ clearLog }}" style="min-height:44px;">Yes, clear the log</button>
+                    <button class="btn btn-ghost" onClick="{{ closeClear }}" style="min-height:44px;">Cancel</button>
+                  </div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ clearClosed }}" hint-placeholder-val="{{ true }}">
+                <button class="btn btn-secondary" onClick="{{ openClear }}" style="min-height:44px;">Clear match log</button>
+              </sc-if>
+            </div>
           </sc-if>
 
           <!-- LEADERBOARD -->
@@ -607,7 +619,7 @@ class Component extends DCLogic {
     tab: 'roster', sel: null, addOpen: false, addName: '', addHcp: '',
     mType: 'singles', a1: '', a2: '', b1: '', b2: '', phase: 'setup',
     sets: [[-1, -1], [-1, -1], [-1, -1]], scoreErr: '', result: null,
-    editOpen: false, editVal: '', editErr: '',
+    editOpen: false, editVal: '', editErr: '', clearOpen: false,
   };
   startFor(r) { return r === 0 ? 'Level' : r === 10 ? '15\u2013love' : r === 20 ? '30\u2013love' : r === 90 ? '30 / minus 30' : '30 / minus 15'; }
   restrFor(r) { return this.CODES.filter(c => r >= c.from); }
@@ -828,6 +840,10 @@ class Component extends DCLogic {
       resScore: st.result ? st.result.score : '', resMeta: st.result ? st.result.meta : '',
       resAdj: st.result ? st.result.adj : [],
       matchesView, boardView,
+      clearOpen: st.clearOpen, clearClosed: !st.clearOpen,
+      openClear: () => set({ clearOpen: true }),
+      closeClear: () => set({ clearOpen: false }),
+      clearLog: () => { const nd = { ...data, matches: [] }; this.persist(nd); set({ data: nd, clearOpen: false }); },
       cRoster: tabC('roster'), cNew: tabC('new'), cLog: tabC('log'), cBoard: tabC('board'),
       goRosterTab: () => set({ tab: 'roster', sel: null }),
       goNewTab: () => set({ tab: 'new' }),
