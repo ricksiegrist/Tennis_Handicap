@@ -303,7 +303,7 @@ a{color:var(--color-accent-700);text-decoration:none;} a:hover{color:var(--color
                   <input class="input" placeholder="Starting handicap, 0–100" inputMode="decimal" value="{{ addHcp }}" onChange="{{ onAddHcp }}">
                   <div style="font-size:12px;color:var(--color-neutral-700);">Assign from the scale: 0–9 county, 10–20 first team, 21–33 solid club, 34–50 social, 51–66 improver, 67–83 beginner, 84–100 new. Provisional for the first {{ provN }} matches — adjustments doubled.</div>
                   <div style="display:flex;gap:10px;">
-                    <button class="btn btn-primary" onClick="{{ addPlayer }}" style="min-height:44px;">Add player</button>
+                    <button class="btn btn-primary" onClick="{{ addPlayer }}" style="min-height:44px;">Confirm</button>
                     <button class="btn btn-ghost" onClick="{{ toggleAdd }}" style="min-height:44px;">Cancel</button>
                   </div>
                 </div>
@@ -343,8 +343,9 @@ a{color:var(--color-accent-700);text-decoration:none;} a:hover{color:var(--color
                 </div>
               </sc-if>
               <sc-if value="{{ editClosed }}" hint-placeholder-val="{{ true }}">
-                <div style="padding:14px 0 0;">
+                <div style="padding:14px 0 0;display:flex;gap:10px;flex-wrap:wrap;">
                   <button class="btn btn-secondary" onClick="{{ openEdit }}" style="min-height:44px;">Update handicap</button>
+                  <button class="btn btn-ghost" onClick="{{ toggleProv }}" style="min-height:44px;">{{ provBtnLabel }}</button>
                 </div>
               </sc-if>
               <div style="font:700 12px var(--font-heading);letter-spacing:1.5px;text-transform:uppercase;padding:18px 0 6px;">Handicap history</div>
@@ -487,7 +488,7 @@ a{color:var(--color-accent-700);text-decoration:none;} a:hover{color:var(--color
                   </select>
                 </div>
               </sc-for>
-              <div style="font-size:12px;color:var(--color-neutral-700);">Leave unplayed sets as “–”. Games are scored after the handicap starts are applied.</div>
+              <div style="font-size:12px;color:var(--color-neutral-700);">Leave unplayed sets as “–”. For an 8- or 10-game pro set, enter it as a single set (e.g. 8–6 or 10–7). Games are scored after the handicap starts are applied.</div>
               <sc-if value="{{ scoreErrShow }}" hint-placeholder-val="{{ false }}">
                 <div style="border:2px solid var(--color-accent);padding:10px 12px;font-size:13px;color:var(--color-accent-700);">{{ scoreErr }}</div>
               </sc-if>
@@ -630,7 +631,7 @@ class Component extends DCLogic {
   pById(id) { return this.state.data.players.find(p => p.id === id); }
   names(ids) { return ids.map(id => { const p = this.pById(id); return p ? p.name : '?'; }).join(' / '); }
   recCount(pid) { return this.state.data.matches.filter(m => m.a.includes(pid) || m.b.includes(pid)).length; }
-  isProv(p) { return (p.pm || 0) + this.recCount(p.id) < (this.props.provisionalMatches ?? 10); }
+  isProv(p) { if (p.prov === false) return false; if (p.prov === true) return true; return (p.pm || 0) + this.recCount(p.id) < (this.props.provisionalMatches ?? 10); }
   sideHcp(ids) { const hs = ids.map(id => this.pById(id).hcp); return Math.round(hs.reduce((a, b) => a + b, 0) / hs.length); }
   rec(pid) { let w = 0, l = 0; this.state.data.matches.forEach(m => { const inA = m.a.includes(pid), inB = m.b.includes(pid); if (!inA && !inB) return; ((m.win === 'a') === inA) ? w++ : l++; }); return w + '\u2013' + l; }
   persist(data) { try { localStorage.setItem(this.KEY, JSON.stringify(data)); } catch (e) { } }
@@ -791,6 +792,12 @@ class Component extends DCLogic {
       openEdit: () => { const p = this.pById(this.state.sel); set({ editOpen: true, editVal: p ? p.hcp.toFixed(1) : '', editErr: '' }); },
       closeEdit: () => set({ editOpen: false, editErr: '' }),
       onEditVal: e => set({ editVal: e.target.value }),
+      provBtnLabel: detailProv ? 'Mark as established' : 'Mark as provisional',
+      toggleProv: () => {
+        const p = this.pById(this.state.sel); if (!p) return;
+        const nd = { ...data, players: data.players.map(x => x.id === p.id ? { ...x, prov: !this.isProv(p) } : x) };
+        this.persist(nd); set({ data: nd });
+      },
       saveEdit: () => {
         const p = this.pById(this.state.sel);
         const h = parseFloat(this.state.editVal);
@@ -833,7 +840,7 @@ class Component extends DCLogic {
       backToSetup: () => set({ phase: 'setup' }),
       rubric, codes: this.CODES,
       vsLine: (st.a1 ? this.names(dbl ? [st.a1, st.a2].filter(Boolean) : [st.a1]) : 'Side A') + '  vs  ' + (st.b1 ? this.names(dbl ? [st.b1, st.b2].filter(Boolean) : [st.b1]) : 'Side B'),
-      setsView, gameNums: [0, 1, 2, 3, 4, 5, 6, 7],
+      setsView, gameNums: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
       scoreErr: st.scoreErr, scoreErrShow: !!st.scoreErr,
       finish, resetMatch,
       resWinner: st.result ? st.result.winner : '', resLoser: st.result ? st.result.loser : '',
