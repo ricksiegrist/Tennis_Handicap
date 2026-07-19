@@ -300,7 +300,7 @@ a{color:var(--color-accent-700);text-decoration:none;} a:hover{color:var(--color
                 <div style="display:flex;flex-direction:column;gap:10px;">
                   <div style="font:700 12px var(--font-heading);letter-spacing:1.5px;text-transform:uppercase;">New player</div>
                   <input class="input" placeholder="Full name" value="{{ addName }}" onChange="{{ onAddName }}">
-                  <input class="input" placeholder="Starting handicap, 0–100" inputMode="decimal" value="{{ addHcp }}" onChange="{{ onAddHcp }}">
+                  <input class="input" placeholder="Starting handicap, 0–100 (sets singles and doubles)" inputMode="decimal" value="{{ addHcp }}" onChange="{{ onAddHcp }}">
                   <div style="font-size:12px;color:var(--color-neutral-700);">Assign from the scale: 0–9 county, 10–20 first team, 21–33 solid club, 34–50 social, 51–66 improver, 67–83 beginner, 84–100 new. Provisional for the first {{ provN }} matches — adjustments doubled.</div>
                   <div style="display:flex;gap:10px;">
                     <button class="btn btn-primary" onClick="{{ addPlayer }}" style="min-height:44px;">Confirm</button>
@@ -326,14 +326,18 @@ a{color:var(--color-accent-700);text-decoration:none;} a:hover{color:var(--color
                 <sc-if value="{{ detailProv }}" hint-placeholder-val="{{ false }}"><span class="tag tag-accent">Provisional</span></sc-if>
               </div>
               <div style="display:flex;gap:24px;padding:14px 0 18px;border-bottom:2px solid var(--color-text);">
-                <span><span style="display:block;font:800 30px var(--font-heading);color:var(--color-accent-700);">{{ detailHcp }}</span><span style="font-size:11px;letter-spacing:1px;color:var(--color-neutral-700);">HANDICAP</span></span>
+                <span><span style="display:block;font:800 30px var(--font-heading);color:var(--color-accent-700);">{{ detailHcp }}</span><span style="font-size:11px;letter-spacing:1px;color:var(--color-neutral-700);">SINGLES</span></span>
+                <span><span style="display:block;font:800 30px var(--font-heading);color:var(--color-accent-700);">{{ detailHcpD }}</span><span style="font-size:11px;letter-spacing:1px;color:var(--color-neutral-700);">DOUBLES</span></span>
                 <span><span style="display:block;font:800 30px var(--font-heading);">{{ detailRec }}</span><span style="font-size:11px;letter-spacing:1px;color:var(--color-neutral-700);">WON–LOST</span></span>
                 <span><span style="display:block;font:800 30px var(--font-heading);">{{ detailBand }}</span><span style="font-size:11px;letter-spacing:1px;color:var(--color-neutral-700);">STANDARD</span></span>
               </div>
               <sc-if value="{{ editOpen }}" hint-placeholder-val="{{ false }}">
                 <div style="display:flex;flex-direction:column;gap:10px;padding:16px 0;border-bottom:1px solid var(--color-neutral-300);">
-                  <div style="font:700 12px var(--font-heading);letter-spacing:1.5px;text-transform:uppercase;">Set handicap</div>
-                  <input class="input" placeholder="New handicap, 0–100" inputMode="decimal" value="{{ editVal }}" onChange="{{ onEditVal }}">
+                  <div style="font:700 12px var(--font-heading);letter-spacing:1.5px;text-transform:uppercase;">Set handicaps</div>
+                  <div style="display:flex;gap:10px;">
+                    <span style="flex:1;display:flex;flex-direction:column;gap:4px;"><span style="font:700 10px var(--font-heading);letter-spacing:1.5px;color:var(--color-neutral-700);">SINGLES</span><input class="input" inputMode="decimal" value="{{ editVal }}" onChange="{{ onEditVal }}"></span>
+                    <span style="flex:1;display:flex;flex-direction:column;gap:4px;"><span style="font:700 10px var(--font-heading);letter-spacing:1.5px;color:var(--color-neutral-700);">DOUBLES</span><input class="input" inputMode="decimal" value="{{ editValD }}" onChange="{{ onEditValD }}"></span>
+                  </div>
                   <div style="font-size:12px;color:var(--color-neutral-700);">Committee correction — recorded in the history. Kept to one decimal, 0–100.</div>
                   <sc-if value="{{ editErrShow }}" hint-placeholder-val="{{ false }}"><div style="border:2px solid var(--color-accent);padding:10px 12px;font-size:13px;color:var(--color-accent-700);">{{ editErr }}</div></sc-if>
                   <div style="display:flex;gap:10px;">
@@ -427,6 +431,7 @@ a{color:var(--color-accent-700);text-decoration:none;} a:hover{color:var(--color
                     </sc-if>
                     <div style="font-size:13px;color:var(--color-neutral-800);border-top:1px solid var(--color-neutral-300);padding-top:7px;">{{ oddsTie }}</div>
                     <div style="font-size:12px;color:var(--color-neutral-700);">{{ oddsDiff }}</div>
+                    <div style="font-size:13px;color:var(--color-neutral-800);border-top:1px solid var(--color-neutral-300);padding-top:7px;"><b style="color:var(--color-text);">If played level:</b> {{ oddsLevel }}</div>
                   </div>
                 </div>
                 <sc-if value="{{ oddsPlayable }}" hint-placeholder-val="{{ false }}">
@@ -565,13 +570,13 @@ a{color:var(--color-accent-700);text-decoration:none;} a:hover{color:var(--color
           <!-- LEADERBOARD -->
           <sc-if value="{{ showBoard }}" hint-placeholder-val="{{ false }}">
             <div style="font:800 28px var(--font-heading);padding:20px 20px 4px;">Leaderboard</div>
-            <div style="font-size:12px;color:var(--color-neutral-700);padding:0 20px 12px;">Ranked by handicap — lowest is strongest</div>
+            <div style="font-size:12px;color:var(--color-neutral-700);padding:0 20px 12px;">Ranked by singles handicap — lowest is strongest. D = doubles.</div>
             <sc-for list="{{ boardView }}" as="b" hint-placeholder-count="8">
               <div style="display:flex;align-items:center;gap:14px;padding:0 20px;min-height:52px;border-top:1px solid var(--color-neutral-300);background:{{ b.bg }};">
                 <span style="font:800 16px var(--font-heading);color:var(--color-accent-700);width:26px;">{{ b.rank }}</span>
                 <span style="flex:1;font-weight:600;font-size:15px;">{{ b.name }}</span>
                 <span style="font-size:12px;color:var(--color-neutral-700);">{{ b.rec }}</span>
-                <span style="font:800 18px var(--font-heading);width:48px;text-align:right;">{{ b.hcp }}</span>
+                <span style="width:52px;text-align:right;"><span style="display:block;font:800 18px var(--font-heading);">{{ b.hcp }}</span><span style="font-size:10px;color:var(--color-neutral-700);letter-spacing:1px;">D {{ b.hcpD }}</span></span>
               </div>
             </sc-for>
             <div style="height:32px;"></div>
@@ -610,7 +615,7 @@ class Component extends DCLogic {
     { code: 'B', from: 80, text: 'Double bounce — the weaker side may play the ball on its second bounce' },
   ];
   seed() {
-    const P = (id, name, hcp, pm, hist) => ({ id, name, hcp, pm, hist });
+    const P = (id, name, hcp, pm, hist) => ({ id, name, hcp, hcpD: hcp, pm, hist });
     return {
       players: [
         P('maya', 'Maya Milic-Strkalj', 12, 14, [{ d: '2026-06-01', label: 'Initial assessment — first-team standard', delta: 0, after: 12 }]),
@@ -629,12 +634,17 @@ class Component extends DCLogic {
     };
   }
   state = {
-    data: (() => { try { const s = localStorage.getItem('brighton-handicaps-v2'); if (s) return JSON.parse(s); } catch (e) { } return this.seed(); })(),
+    data: (() => { let d = null; try { const s = localStorage.getItem('brighton-handicaps-v2'); if (s) d = JSON.parse(s); } catch (e) { } if (!d) d = this.seed(); d.players = d.players.map(p => ({ ...p, hcpD: (p.hcpD == null ? p.hcp : p.hcpD) })); return d; })(),
     tab: 'roster', sel: null, addOpen: false, addName: '', addHcp: '',
     mType: 'singles', a1: '', a2: '', b1: '', b2: '', phase: 'setup',
     sets: [[-1, -1], [-1, -1], [-1, -1]], scoreErr: '', result: null,
     editOpen: false, editVal: '', editErr: '', clearOpen: false, clearHistOpen: false,
   };
+  levelPredict(diff, strongN) {
+    const g = Math.max(0, Math.round(6 - diff / 10));
+    if (g >= 6) return 'Dead level — could go either way, likely tie-break sets (7\u20136 either side).';
+    return 'about 6\u2013' + g + ', 6\u2013' + g + ' to ' + strongN + ' (roughly one game per set per 10 of difference).';
+  }
   startFor(r) { return r === 0 ? 'Level' : r === 10 ? '15\u2013love' : r === 20 ? '30\u2013love' : r === 90 ? '30 / minus 30' : '30 / minus 15'; }
   restrFor(r) { return this.CODES.filter(c => r >= c.from); }
   band(h) {
@@ -645,7 +655,7 @@ class Component extends DCLogic {
   names(ids) { return ids.map(id => { const p = this.pById(id); return p ? p.name : '?'; }).join(' / '); }
   recCount(pid) { return this.state.data.matches.filter(m => m.a.includes(pid) || m.b.includes(pid)).length; }
   isProv(p) { if (p.prov === false) return false; if (p.prov === true) return true; return (p.pm || 0) + this.recCount(p.id) < (this.props.provisionalMatches ?? 10); }
-  sideHcp(ids) { const hs = ids.map(id => this.pById(id).hcp); return Math.round(hs.reduce((a, b) => a + b, 0) / hs.length); }
+  sideHcp(ids, dbl) { const hs = ids.map(id => { const p = this.pById(id); return dbl ? p.hcpD : p.hcp; }); return Math.round(hs.reduce((a, b) => a + b, 0) / hs.length); }
   rec(pid) { let w = 0, l = 0; this.state.data.matches.forEach(m => { const inA = m.a.includes(pid), inB = m.b.includes(pid); if (!inA && !inB) return; ((m.win === 'a') === inA) ? w++ : l++; }); return w + '\u2013' + l; }
   persist(data) { try { localStorage.setItem(this.KEY, JSON.stringify(data)); } catch (e) { } }
   renderVals() {
@@ -656,15 +666,15 @@ class Component extends DCLogic {
     const players = [...data.players].sort((x, y) => x.name.localeCompare(y.name));
     const playersView = players.map(p => ({
       name: p.name, hcp: fmt(p.hcp),
-      sub: 'W\u2013L ' + this.rec(p.id) + ' · ' + this.band(p.hcp) + (this.isProv(p) ? ' · provisional' : ''),
+      sub: 'Dbls ' + fmt(p.hcpD) + ' · W\u2013L ' + this.rec(p.id) + (this.isProv(p) ? ' · provisional' : ''),
       initials: p.name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase(),
       open: () => set({ sel: p.id, tab: 'roster' }),
     }));
-    let detailName = '', detailHcp = '', detailRec = '', detailBand = '', detailProv = false, detailHist = [];
+    let detailName = '', detailHcp = '', detailHcpD = '', detailRec = '', detailBand = '', detailProv = false, detailHist = [];
     if (st.sel) {
       const p = this.pById(st.sel);
       if (p) {
-        detailName = p.name; detailHcp = fmt(p.hcp); detailRec = this.rec(p.id); detailBand = this.band(p.hcp); detailProv = this.isProv(p);
+        detailName = p.name; detailHcp = fmt(p.hcp); detailHcpD = fmt(p.hcpD); detailRec = this.rec(p.id); detailBand = this.band(p.hcp); detailProv = this.isProv(p);
         detailHist = [...p.hist].reverse().map(h => ({
           date: h.d, label: h.label, after: h.after.toFixed(1),
           delta: h.delta === 0 ? '\u2014' : (h.delta > 0 ? '+' : '\u2212') + Math.abs(h.delta).toFixed(1),
@@ -680,7 +690,7 @@ class Component extends DCLogic {
     if (dup) setupErr = 'Each player can only appear once in the match.';
     else if (chosen.length === need.length) {
       const A = dbl ? [st.a1, st.a2] : [st.a1], B = dbl ? [st.b1, st.b2] : [st.b1];
-      const ha = this.sideHcp(A), hb = this.sideHcp(B), diff = Math.abs(ha - hb);
+      const ha = this.sideHcp(A, dbl), hb = this.sideHcp(B, dbl), diff = Math.abs(ha - hb);
       const weak = ha >= hb ? A : B, strong = ha >= hb ? B : A;
       const weakN = this.names(weak), strongN = this.names(strong);
       if (diff > 94) {
@@ -688,6 +698,7 @@ class Component extends DCLogic {
           playable: false, start: 'Coaching sets', recv: 'Difference ' + diff + ' is beyond 94 — a handicap match is not recommended.',
           note: '', restr: [], tie: 'Play coaching sets instead, and record nothing for handicap.',
           diffLine: 'Difference ' + diff + (dbl ? ' — pair averages ' + ha + ' vs ' + hb : ''), codesShort: '',
+          level: this.levelPredict(diff, strongN),
         };
       } else {
         const r = Math.min(90, Math.round(diff / 10) * 10);
@@ -701,10 +712,11 @@ class Component extends DCLogic {
           diffLine: 'Difference ' + diff + ' \u2192 rounds to ' + r + (dbl ? ' — pair averages ' + ha + ' vs ' + hb : ''),
           codesShort: restr.length ? ' · ' + restr.map(c => c.code).join(' ') : '',
           startLabel: this.startFor(r), r,
+          level: this.levelPredict(diff, strongN),
         };
       }
     }
-    const opts = players.map(p => ({ id: p.id, label: p.name + ' · ' + fmt(p.hcp) }));
+    const opts = players.map(p => ({ id: p.id, label: p.name + ' · ' + fmt(dbl ? p.hcpD : p.hcp) }));
     const sel = k => e => set({ [k]: e.target.value });
     const setsView = st.sets.map((s, i) => ({
       label: 'SET ' + (i + 1), aVal: String(s[0]), bVal: String(s[1]),
@@ -734,19 +746,20 @@ class Component extends DCLogic {
         let mag = base * (dbl && halve ? 0.5 : 1) * (prov ? 2 : 1);
         mag = Math.round(mag * 10) / 10;
         const delta = w ? -mag : mag;
-        const after = Math.round(Math.max(0, Math.min(100, p.hcp + delta)) * 10) / 10;
+        const cur0 = dbl ? p.hcpD : p.hcp;
+        const after = Math.round(Math.max(0, Math.min(100, cur0 + delta)) * 10) / 10;
         const notes = [];
         if (big) notes.push(w ? 'big win' : 'big loss');
         if (dbl && halve) notes.push('doubles \u00d7\u00bd');
         if (prov) notes.push('provisional \u00d72');
         adj.push({
           name: p.name, note: notes.length ? '(' + notes.join(', ') + ')' : '',
-          from: p.hcp.toFixed(1), to: after.toFixed(1),
+          from: cur0.toFixed(1), to: after.toFixed(1),
           delta: (delta < 0 ? '\u2212' : '+') + Math.abs(delta).toFixed(1),
           color: delta < 0 ? 'var(--color-accent-700)' : 'var(--color-neutral-800)',
         });
-        const label = (w ? 'def. ' : 'lost to ') + this.names(w ? loseIds : winIds) + ' ' + scoreStr + (notes.length ? ' (' + notes.join(', ') + ')' : '');
-        return { ...p, hcp: after, hist: [...p.hist, { d: today, label, delta, after }] };
+        const label = (dbl ? '[doubles] ' : '[singles] ') + (w ? 'def. ' : 'lost to ') + this.names(w ? loseIds : winIds) + ' ' + scoreStr + (notes.length ? ' (' + notes.join(', ') + ')' : '');
+        return { ...p, [dbl ? 'hcpD' : 'hcp']: after, hist: [...p.hist, { d: today, label, delta, after }] };
       });
       const startLabel = odds && odds.playable ? odds.start + (odds.codesShort || '') : 'Level';
       const wAdj = adj.find(x => x.delta.startsWith('\u2212')), lAdj = adj.find(x => x.delta.startsWith('+'));
@@ -767,7 +780,7 @@ class Component extends DCLogic {
       if (!name || isNaN(h)) return;
       const hv = Math.round(Math.max(0, Math.min(100, h)) * 10) / 10;
       const today = new Date().toISOString().slice(0, 10);
-      const nd = { ...data, players: [...data.players, { id: 'p' + Date.now(), name, hcp: hv, pm: 0, hist: [{ d: today, label: 'Initial assessment — ' + this.band(hv).toLowerCase() + ' standard, provisional', delta: 0, after: hv }] }] };
+      const nd = { ...data, players: [...data.players, { id: 'p' + Date.now(), name, hcp: hv, hcpD: hv, pm: 0, hist: [{ d: today, label: 'Initial assessment — ' + this.band(hv).toLowerCase() + ' standard, provisional', delta: 0, after: hv }] }] };
       this.persist(nd);
       set({ data: nd, addOpen: false, addName: '', addHcp: '' });
     };
@@ -781,7 +794,7 @@ class Component extends DCLogic {
       };
     });
     const boardView = [...data.players].sort((x, y) => x.hcp - y.hcp).map((p, i) => ({
-      rank: String(i + 1).padStart(2, '0'), name: p.name, hcp: fmt(p.hcp), rec: this.rec(p.id),
+      rank: String(i + 1).padStart(2, '0'), name: p.name, hcp: fmt(p.hcp), hcpD: fmt(p.hcpD), rec: this.rec(p.id),
       bg: i === 0 ? 'var(--color-accent-100)' : 'transparent',
     }));
     const rubric = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90].map(r => ({
@@ -798,7 +811,7 @@ class Component extends DCLogic {
       showResult: st.tab === 'new' && st.phase === 'result',
       showRubric: st.tab === 'new' && st.phase === 'rubric',
       showMatches: st.tab === 'log', showBoard: st.tab === 'board',
-      detailName, detailHcp, detailRec, detailBand, detailProv, detailHist,
+      detailName, detailHcp, detailHcpD, detailRec, detailBand, detailProv, detailHist,
       closeDetail: () => set({ sel: null, editOpen: false, editErr: '', clearHistOpen: false }),
       clearHistOpen: st.clearHistOpen, clearHistClosed: !st.clearHistOpen,
       openClearHist: () => set({ clearHistOpen: true }),
@@ -811,7 +824,8 @@ class Component extends DCLogic {
       },
       editOpen: st.editOpen, editClosed: !st.editOpen, editVal: st.editVal,
       editErr: st.editErr, editErrShow: !!st.editErr,
-      openEdit: () => { const p = this.pById(this.state.sel); set({ editOpen: true, editVal: p ? p.hcp.toFixed(1) : '', editErr: '' }); },
+      openEdit: () => { const p = this.pById(this.state.sel); set({ editOpen: true, editVal: p ? p.hcp.toFixed(1) : '', editValD: p ? p.hcpD.toFixed(1) : '', editErr: '' }); },
+      editValD: st.editValD, onEditValD: e => set({ editValD: e.target.value }),
       closeEdit: () => set({ editOpen: false, editErr: '' }),
       onEditVal: e => set({ editVal: e.target.value }),
       provBtnLabel: detailProv ? 'Mark as established' : 'Mark as provisional',
@@ -822,18 +836,17 @@ class Component extends DCLogic {
       },
       saveEdit: () => {
         const p = this.pById(this.state.sel);
-        const h = parseFloat(this.state.editVal);
         if (!p) return;
-        if (isNaN(h) || h < 0 || h > 100) { set({ editErr: 'Enter a number between 0 and 100.' }); return; }
-        const hv = Math.round(h * 10) / 10;
-        const delta = Math.round((hv - p.hcp) * 10) / 10;
-        if (delta === 0) { set({ editOpen: false, editErr: '' }); return; }
+        const hS = parseFloat(this.state.editVal), hD = parseFloat(this.state.editValD);
+        if (isNaN(hS) || hS < 0 || hS > 100 || isNaN(hD) || hD < 0 || hD > 100) { set({ editErr: 'Enter numbers between 0 and 100.' }); return; }
+        const vS = Math.round(hS * 10) / 10, vD = Math.round(hD * 10) / 10;
+        const dS = Math.round((vS - p.hcp) * 10) / 10, dD = Math.round((vD - p.hcpD) * 10) / 10;
+        if (dS === 0 && dD === 0) { set({ editOpen: false, editErr: '' }); return; }
         const today = new Date().toISOString().slice(0, 10);
-        const nd = {
-          ...data, players: data.players.map(x => x.id === p.id
-            ? { ...x, hcp: hv, hist: [...x.hist, { d: today, label: 'Committee correction ' + p.hcp.toFixed(1) + ' \u2192 ' + hv.toFixed(1), delta, after: hv }] }
-            : x),
-        };
+        const hist = [...p.hist];
+        if (dS !== 0) hist.push({ d: today, label: 'Committee correction, singles ' + p.hcp.toFixed(1) + ' \u2192 ' + vS.toFixed(1), delta: dS, after: vS });
+        if (dD !== 0) hist.push({ d: today, label: 'Committee correction, doubles ' + p.hcpD.toFixed(1) + ' \u2192 ' + vD.toFixed(1), delta: dD, after: vD });
+        const nd = { ...data, players: data.players.map(x => x.id === p.id ? { ...x, hcp: vS, hcpD: vD, hist } : x) };
         this.persist(nd);
         set({ data: nd, editOpen: false, editErr: '' });
       },
@@ -854,6 +867,7 @@ class Component extends DCLogic {
       oddsNote: odds ? odds.note : '', oddsNoteShow: !!(odds && odds.note),
       oddsRestr: odds ? odds.restr : [], oddsRestrShow: !!(odds && odds.restr.length),
       oddsTie: odds ? odds.tie : '', oddsDiff: odds ? odds.diffLine : '',
+      oddsLevel: odds ? odds.level : '',
       oddsPlayable: !!(odds && odds.playable),
       oddsCodesShort: odds ? odds.codesShort : '',
       goScore: () => set({ phase: 'score', scoreErr: '' }),
