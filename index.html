@@ -504,6 +504,11 @@ a{color:var(--color-accent-700);text-decoration:none;} a:hover{color:var(--color
                 <div style="font-size:14px;font-weight:600;">{{ vsLine }}</div>
                 <div style="font-size:12px;color:var(--color-accent-700);font-weight:700;">Games start {{ oddsStart }}{{ oddsCodesShort }}</div>
               </div>
+              <label style="display:flex;align-items:center;gap:10px;border:2px solid var(--color-text);padding:12px;cursor:pointer;font-size:14px;font-weight:600;">
+                <input type="checkbox" checked="{{ playedLevel }}" onChange="{{ togglePlayedLevel }}" style="width:18px;height:18px;accent-color:var(--color-accent);">
+                Played level — no handicap starts used
+              </label>
+              <sc-if value="{{ playedLevel }}" hint-placeholder-val="{{ false }}"><div style="font-size:12px;color:var(--color-neutral-700);">Adjustments will compare the result against the level-play prediction: an upset counts ±1.5, a closer-than-predicted loss ±0.5, an expected result changes nothing.</div></sc-if>
               <div style="display:grid;grid-template-columns:64px 1fr 1fr;gap:10px;align-items:center;">
                 <span></span>
                 <span style="font:700 11px var(--font-heading);letter-spacing:1.5px;text-transform:uppercase;color:var(--color-accent-700);">Side A</span>
@@ -747,7 +752,7 @@ class Component extends DCLogic {
     tab: 'roster', sel: null, addOpen: false, addName: '', addHcp: '',
     mType: 'singles', a1: '', a2: '', b1: '', b2: '', phase: 'setup',
     sets: [[-1, -1], [-1, -1], [-1, -1]], scoreErr: '', result: null,
-    editOpen: false, editVal: '', editErr: '', clearOpen: false, clearHistOpen: false, sync: 'syncing', delOpen: false, importMsg: '', boardBy: 'doubles',
+    editOpen: false, editVal: '', editErr: '', clearOpen: false, clearHistOpen: false, sync: 'syncing', delOpen: false, importMsg: '', boardBy: 'doubles', playedLevel: false,
   };
   levelPredict(diff, strongN) {
     const g = 6 - diff / 10;
@@ -857,7 +862,17 @@ class Component extends DCLogic {
       const win = sa > sb ? 'a' : 'b';
       const gw = win === 'a' ? ga : gb, gl = win === 'a' ? gb : ga;
       const big = gw >= 2 * gl;
-      const base = big ? 1.5 : 0.5;
+      let base = big ? 1.5 : 0.5, levelNote = '';
+      if (cur.playedLevel) {
+        const hA2 = this.sideHcp(A, dbl), hB2 = this.sideHcp(B, dbl), diffL = Math.abs(hA2 - hB2);
+        const weakSide = hA2 >= hB2 ? 'a' : 'b';
+        const setsN = played.length, actWeak = (weakSide === 'a' ? ga : gb) / setsN;
+        const expWeak = Math.max(0, 6 - diffL / 10);
+        if (diffL <= 4) levelNote = 'played level, sides even';
+        else if (win === weakSide) { base = 1.5; levelNote = 'upset at level'; }
+        else if (actWeak > expWeak + 0.5) { base = 0.5; levelNote = 'closer than predicted at level'; }
+        else { base = 0; levelNote = 'expected result at level — no change'; }
+      }
       const winIds = win === 'a' ? A : B, loseIds = win === 'a' ? B : A;
       const scoreStr = played.map(([a, b]) => (win === 'a' ? a + '\u2013' + b : b + '\u2013' + a)).join(', ');
       const today = new Date().toISOString().slice(0, 10);
@@ -873,7 +888,7 @@ class Component extends DCLogic {
         const cur0 = dbl ? p.hcpD : p.hcp;
         const after = Math.round(Math.max(0, Math.min(100, cur0 + delta)) * 10) / 10;
         const notes = [];
-        if (big) notes.push(w ? 'big win' : 'big loss');
+        if (cur.playedLevel && levelNote) notes.push(levelNote); else if (big) notes.push(w ? 'big win' : 'big loss');
         if (dbl && halve) notes.push('doubles \u00d7\u00bd');
         if (prov) notes.push('provisional \u00d72');
         adj.push({
@@ -885,7 +900,7 @@ class Component extends DCLogic {
         const label = (dbl ? '[doubles] ' : '[singles] ') + (w ? 'def. ' : 'lost to ') + this.names(w ? loseIds : winIds) + ' ' + scoreStr + (notes.length ? ' (' + notes.join(', ') + ')' : '');
         return { ...p, [dbl ? 'hcpD' : 'hcp']: after, hist: [...p.hist, { d: today, label, delta, after }] };
       });
-      const startLabel = odds && odds.playable ? odds.start + (odds.codesShort || '') : 'Level';
+      const startLabel = cur.playedLevel ? 'Level (by choice)' : (odds && odds.playable ? odds.start + (odds.codesShort || '') : 'Level');
       const wAdj = adj.find(x => x.delta.startsWith('\u2212')), lAdj = adj.find(x => x.delta.startsWith('+'));
       const match = { id: 'm' + Date.now(), d: today, type: cur.mType, a: A, b: B, sets: played, start: startLabel, win, mv: (wAdj ? wAdj.delta : '') + ' / ' + (lAdj ? lAdj.delta : '') };
       const nd = { players: playersNew, matches: [...data.matches, match] };
@@ -894,11 +909,11 @@ class Component extends DCLogic {
         data: nd, phase: 'result', scoreErr: '',
         result: {
           winner: this.names(winIds), loser: this.names(loseIds), score: scoreStr, adj,
-          meta: (dbl ? 'Doubles' : 'Singles') + ' · games started ' + startLabel + (big ? ' · big win (at least twice the games)' : ''),
+          meta: (dbl ? 'Doubles' : 'Singles') + ' · games started ' + startLabel + (cur.playedLevel ? ' · played level' : big ? ' · big win (at least twice the games)' : ''),
         },
       });
     };
-    const resetMatch = () => set({ phase: 'setup', a1: '', a2: '', b1: '', b2: '', mType: 'singles', sets: [[-1, -1], [-1, -1], [-1, -1]], scoreErr: '', result: null });
+    const resetMatch = () => set({ phase: 'setup', a1: '', a2: '', b1: '', b2: '', mType: 'singles', playedLevel: false, sets: [[-1, -1], [-1, -1], [-1, -1]], scoreErr: '', result: null });
     const addPlayer = () => {
       const name = this.state.addName.trim(), h = parseFloat(this.state.addHcp);
       if (!name || isNaN(h)) return;
@@ -1044,6 +1059,7 @@ class Component extends DCLogic {
       segD: st.boardBy === 'singles' ? 'transparent' : 'var(--color-text)',
       segDcol: st.boardBy === 'singles' ? 'var(--color-text)' : 'var(--color-bg)',
       byS: () => set({ boardBy: 'singles' }), byD: () => set({ boardBy: 'doubles' }),
+      playedLevel: st.playedLevel, togglePlayedLevel: () => set({ playedLevel: !this.state.playedLevel }),
       clearOpen: st.clearOpen, clearClosed: !st.clearOpen,
       openClear: () => set({ clearOpen: true }),
       closeClear: () => set({ clearOpen: false }),
