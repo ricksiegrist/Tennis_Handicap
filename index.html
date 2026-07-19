@@ -274,8 +274,8 @@ a{color:var(--color-accent-700);text-decoration:none;} a:hover{color:var(--color
 <div style="height:100dvh;display:flex;flex-direction:column;background:var(--color-bg);font-family:var(--font-body);color:var(--color-text);">
         <div style="padding:calc(env(safe-area-inset-top, 0px) + 14px) 20px 10px;display:flex;align-items:center;gap:8px;border-bottom:2px solid var(--color-text);">
           <span style="width:12px;height:12px;background:var(--color-accent);display:inline-block;"></span>
-          <span style="font:700 11px var(--font-heading);letter-spacing:2px;text-transform:uppercase;">Brighton Highlands LTC</span>
-          <span style="margin-left:auto;font-size:11px;color:var(--color-neutral-700);letter-spacing:1px;">HANDICAPS</span>
+          <span style="font:700 11px var(--font-heading);letter-spacing:2px;text-transform:uppercase;">Bridgton Highlands Tennis</span>
+          <span style="margin-left:auto;font-size:11px;color:{{ syncColor }};letter-spacing:1px;">{{ syncLabel }}</span>
         </div>
         <div style="flex:1;overflow:auto;">
 
@@ -310,6 +310,10 @@ a{color:var(--color-accent-700);text-decoration:none;} a:hover{color:var(--color
               </sc-if>
               <sc-if value="{{ addClosed }}" hint-placeholder-val="{{ true }}">
                 <button class="btn btn-secondary btn-block" onClick="{{ toggleAdd }}" style="min-height:44px;">Add a player</button>
+                <label for="hcp-file" class="btn btn-ghost btn-block" style="min-height:44px;margin-top:10px;cursor:pointer;">Import handicaps from Excel</label>
+                <input id="hcp-file" type="file" accept=".xlsx,.xls,.csv" onChange="{{ onImportFile }}" style="display:none;">
+                <div style="font-size:12px;color:var(--color-neutral-700);margin-top:10px;">Spreadsheet columns: Name, Singles, Doubles (Doubles optional). Existing players are updated as a correction in their history; new names join as provisional players.</div>
+                <sc-if value="{{ importMsgShow }}" hint-placeholder-val="{{ false }}"><div style="border:2px solid var(--color-text);padding:10px 12px;font-size:13px;margin-top:10px;">{{ importMsg }}</div></sc-if>
               </sc-if>
             </div>
           </sc-if>
@@ -373,7 +377,19 @@ a{color:var(--color-accent-700);text-decoration:none;} a:hover{color:var(--color
                 </div>
               </sc-if>
               <sc-if value="{{ clearHistClosed }}" hint-placeholder-val="{{ true }}">
-                <button class="btn btn-secondary" onClick="{{ openClearHist }}" style="min-height:44px;">Clear handicap history</button>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                  <button class="btn btn-secondary" onClick="{{ openClearHist }}" style="min-height:44px;">Clear handicap history</button>
+                  <button class="btn btn-ghost" onClick="{{ openDel }}" style="min-height:44px;color:var(--color-accent-700);">Delete player</button>
+                </div>
+                <sc-if value="{{ delOpen }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;flex-direction:column;gap:10px;margin-top:12px;">
+                    <div style="border:2px solid var(--color-accent);padding:10px 12px;font-size:13px;color:var(--color-accent-700);">This removes {{ detailName }} from the roster and leaderboard. Their recorded matches stay in the log.</div>
+                    <div style="display:flex;gap:10px;">
+                      <button class="btn btn-primary" onClick="{{ delPlayer }}" style="min-height:44px;">Yes, delete player</button>
+                      <button class="btn btn-ghost" onClick="{{ closeDel }}" style="min-height:44px;">Cancel</button>
+                    </div>
+                  </div>
+                </sc-if>
               </sc-if>
             </div>
           </sc-if>
@@ -607,6 +623,95 @@ a{color:var(--color-accent-700);text-decoration:none;} a:hover{color:var(--color
 <script type="text/x-dc" data-dc-script data-props="{&quot;provisionalMatches&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:10,&quot;min&quot;:0,&quot;max&quot;:30,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Handicap engine&quot;},&quot;halveDoubles&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Handicap engine&quot;}}">
 class Component extends DCLogic {
   KEY = 'brighton-handicaps-v2';
+  SUPA = 'https://uncbwavesacjiieggpbj.supabase.co/rest/v1/club_data';
+  SUPA_KEY = 'sb_publishable_rJEm7eyai20_SmEl90hYyA_lyC27d8l';
+  ROW = 'brighton';
+  sHdr(json) { const h = { apikey: this.SUPA_KEY }; if (json) h['Content-Type'] = 'application/json'; return h; }
+  cloudPull() {
+    return fetch(this.SUPA + '?id=eq.' + this.ROW + '&select=data', { headers: this.sHdr() })
+      .then(r => { if (!r.ok) throw new Error('pull ' + r.status); return r.json(); })
+      .then(rows => rows.length ? rows[0].data : null);
+  }
+  cloudPush(data) {
+    this._dirty = true;
+    this.setState({ sync: 'syncing' });
+    return fetch(this.SUPA + '?on_conflict=id', {
+      method: 'POST',
+      headers: { ...this.sHdr(true), Prefer: 'resolution=merge-duplicates' },
+      body: JSON.stringify([{ id: this.ROW, data, updated_at: new Date().toISOString() }]),
+    }).then(r => {
+      if (!r.ok) throw new Error('push ' + r.status);
+      this._dirty = false;
+      this.setState({ sync: 'synced' });
+    }).catch(() => this.setState({ sync: 'offline' }));
+  }
+  componentDidMount() {
+    const tick = () => {
+      if (this._dirty) { this.cloudPush(this.state.data); return; }
+      this.cloudPull().then(d => {
+        if (d === null) { this.cloudPush(this.state.data); return; }
+        if (JSON.stringify(d) !== JSON.stringify(this.state.data)) {
+          try { localStorage.setItem(this.KEY, JSON.stringify(d)); } catch (e) { }
+          this.setState({ data: d, sync: 'synced' });
+        } else this.setState({ sync: 'synced' });
+      }).catch(() => this.setState({ sync: 'offline' }));
+    };
+    tick();
+    this._poll = setInterval(tick, 15000);
+  }
+  componentWillUnmount() { clearInterval(this._poll); }
+  loadXLSX() {
+    if (window.XLSX) return Promise.resolve(window.XLSX);
+    if (!this._xlsxP) this._xlsxP = new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.src = 'https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js';
+      s.onload = () => res(window.XLSX); s.onerror = rej;
+      document.head.appendChild(s);
+    });
+    return this._xlsxP;
+  }
+  applyImport(rows) {
+    const data = this.state.data;
+    const norm = s => String(s == null ? '' : s).trim();
+    const clamp = v => Math.round(Math.max(0, Math.min(100, v)) * 10) / 10;
+    let start = 0, nameCol = 0, sCol = 1, dCol = 2;
+    const head = (rows[0] || []).map(c => norm(c).toLowerCase());
+    if (head.some(c => c.includes('name'))) {
+      nameCol = head.findIndex(c => c.includes('name'));
+      const si = head.findIndex(c => c.includes('singl') || c === 'handicap' || c === 'hcp');
+      const di = head.findIndex(c => c.includes('doubl'));
+      sCol = si >= 0 ? si : nameCol + 1;
+      dCol = di;
+      start = 1;
+    }
+    const today = new Date().toISOString().slice(0, 10);
+    let updated = 0, added = 0; const skipped = [];
+    const players = [...data.players];
+    for (let i = start; i < rows.length; i++) {
+      const r = rows[i] || [];
+      const name = norm(r[nameCol]);
+      if (!name) continue;
+      const hS = parseFloat(norm(r[sCol]));
+      const hD = dCol >= 0 ? parseFloat(norm(r[dCol])) : NaN;
+      if (isNaN(hS)) { skipped.push(name); continue; }
+      const vS = clamp(hS), vD = isNaN(hD) ? vS : clamp(hD);
+      const idx = players.findIndex(p => p.name.toLowerCase() === name.toLowerCase());
+      if (idx >= 0) {
+        const p = players[idx];
+        const hist = [...p.hist];
+        if (p.hcp !== vS) hist.push({ d: today, label: 'Spreadsheet import, singles ' + p.hcp.toFixed(1) + ' \u2192 ' + vS.toFixed(1), delta: Math.round((vS - p.hcp) * 10) / 10, after: vS });
+        if (p.hcpD !== vD) hist.push({ d: today, label: 'Spreadsheet import, doubles ' + p.hcpD.toFixed(1) + ' \u2192 ' + vD.toFixed(1), delta: Math.round((vD - p.hcpD) * 10) / 10, after: vD });
+        if (hist.length !== p.hist.length) { players[idx] = { ...p, hcp: vS, hcpD: vD, hist }; updated++; }
+      } else {
+        players.push({ id: 'p' + Date.now() + '_' + i, name, hcp: vS, hcpD: vD, pm: 0, hist: [{ d: today, label: 'Spreadsheet import \u2014 ' + this.band(vS).toLowerCase() + ' standard, provisional', delta: 0, after: vS }] });
+        added++;
+      }
+    }
+    if (!updated && !added && !skipped.length) { this.setState({ importMsg: 'No usable rows found. Expected columns: Name, Singles, Doubles.' }); return; }
+    const nd = { ...data, players };
+    this.persist(nd);
+    this.setState({ data: nd, importMsg: 'Imported \u2014 ' + updated + ' updated, ' + added + ' added' + (skipped.length ? '. Skipped (no number): ' + skipped.join(', ') : '') + '.' });
+  }
   CODES = [
     { code: 'S', from: 40, text: 'One serve only — no second serve' },
     { code: 'O', from: 50, text: 'No overheads — a lob must be allowed to bounce before being struck' },
@@ -638,7 +743,7 @@ class Component extends DCLogic {
     tab: 'roster', sel: null, addOpen: false, addName: '', addHcp: '',
     mType: 'singles', a1: '', a2: '', b1: '', b2: '', phase: 'setup',
     sets: [[-1, -1], [-1, -1], [-1, -1]], scoreErr: '', result: null,
-    editOpen: false, editVal: '', editErr: '', clearOpen: false, clearHistOpen: false,
+    editOpen: false, editVal: '', editErr: '', clearOpen: false, clearHistOpen: false, sync: 'syncing', delOpen: false, importMsg: '',
   };
   levelPredict(diff, strongN) {
     const g = 6 - diff / 10;
@@ -662,7 +767,7 @@ class Component extends DCLogic {
   isProv(p) { if (p.prov === false) return false; if (p.prov === true) return true; return (p.pm || 0) + this.recCount(p.id) < (this.props.provisionalMatches ?? 10); }
   sideHcp(ids, dbl) { const hs = ids.map(id => { const p = this.pById(id); return dbl ? p.hcpD : p.hcp; }); return Math.round(hs.reduce((a, b) => a + b, 0) / hs.length); }
   rec(pid) { let w = 0, l = 0; this.state.data.matches.forEach(m => { const inA = m.a.includes(pid), inB = m.b.includes(pid); if (!inA && !inB) return; ((m.win === 'a') === inA) ? w++ : l++; }); return w + '\u2013' + l; }
-  persist(data) { try { localStorage.setItem(this.KEY, JSON.stringify(data)); } catch (e) { } }
+  persist(data) { try { localStorage.setItem(this.KEY, JSON.stringify(data)); } catch (e) { } this.cloudPush(data); }
   renderVals() {
     const st = this.state, data = st.data;
     const set = o => this.setState(o);
@@ -670,8 +775,8 @@ class Component extends DCLogic {
     const provN = this.props.provisionalMatches ?? 10;
     const players = [...data.players].sort((x, y) => x.name.localeCompare(y.name));
     const playersView = players.map(p => ({
-      name: p.name, hcp: fmt(p.hcp),
-      sub: 'Dbls ' + fmt(p.hcpD) + ' · W\u2013L ' + this.rec(p.id) + (this.isProv(p) ? ' · provisional' : ''),
+      name: p.name, hcp: fmt(p.hcpD),
+      sub: 'Singles ' + fmt(p.hcp) + ' · W\u2013L ' + this.rec(p.id) + (this.isProv(p) ? ' · provisional' : ''),
       initials: p.name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase(),
       open: () => set({ sel: p.id, tab: 'roster' }),
     }));
@@ -809,6 +914,8 @@ class Component extends DCLogic {
     const tabC = t => st.tab === t ? 'var(--color-accent)' : 'var(--color-neutral-700)';
     return {
       provN, playerCount: data.players.length, playersView,
+      syncLabel: st.sync === 'synced' ? 'SYNCED' : st.sync === 'offline' ? 'OFFLINE' : 'SYNCING\u2026',
+      syncColor: st.sync === 'offline' ? 'var(--color-accent-700)' : 'var(--color-neutral-700)',
       showRoster: st.tab === 'roster' && !st.sel,
       showDetail: st.tab === 'roster' && !!st.sel,
       showSetup: st.tab === 'new' && st.phase === 'setup',
@@ -817,7 +924,7 @@ class Component extends DCLogic {
       showRubric: st.tab === 'new' && st.phase === 'rubric',
       showMatches: st.tab === 'log', showBoard: st.tab === 'board',
       detailName, detailHcp, detailHcpD, detailRec, detailBand, detailProv, detailHist,
-      closeDetail: () => set({ sel: null, editOpen: false, editErr: '', clearHistOpen: false }),
+      closeDetail: () => set({ sel: null, editOpen: false, editErr: '', clearHistOpen: false, delOpen: false }),
       clearHistOpen: st.clearHistOpen, clearHistClosed: !st.clearHistOpen,
       openClearHist: () => set({ clearHistOpen: true }),
       closeClearHist: () => set({ clearHistOpen: false }),
@@ -833,6 +940,33 @@ class Component extends DCLogic {
       editValD: st.editValD, onEditValD: e => set({ editValD: e.target.value }),
       closeEdit: () => set({ editOpen: false, editErr: '' }),
       onEditVal: e => set({ editVal: e.target.value }),
+      delOpen: st.delOpen, delClosed: !st.delOpen,
+      openDel: () => set({ delOpen: true }),
+      closeDel: () => set({ delOpen: false }),
+      delPlayer: () => {
+        const p = this.pById(this.state.sel); if (!p) return;
+        const nd = { ...data, players: data.players.filter(x => x.id !== p.id) };
+        this.persist(nd);
+        const patch = { data: nd, sel: null, delOpen: false };
+        ['a1', 'a2', 'b1', 'b2'].forEach(k => { if (this.state[k] === p.id) patch[k] = ''; });
+        set(patch);
+      },
+      importMsg: st.importMsg, importMsgShow: !!st.importMsg,
+      onImportFile: e => {
+        const file = e.target.files && e.target.files[0];
+        e.target.value = '';
+        if (!file) return;
+        set({ importMsg: 'Reading ' + file.name + '\u2026' });
+        const fail = () => set({ importMsg: 'Could not read that file. Save it as .xlsx or .csv and try again.' });
+        if (/\.csv$/i.test(file.name)) {
+          file.text().then(t => this.applyImport(t.split(/\r?\n/).map(l => l.split(',')))).catch(fail);
+        } else {
+          this.loadXLSX().then(X => file.arrayBuffer().then(buf => {
+            const wb = X.read(buf, { type: 'array' });
+            this.applyImport(X.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1 }));
+          })).catch(fail);
+        }
+      },
       provBtnLabel: detailProv ? 'Mark as established' : 'Mark as provisional',
       toggleProv: () => {
         const p = this.pById(this.state.sel); if (!p) return;
