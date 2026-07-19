@@ -754,7 +754,7 @@ class Component extends DCLogic {
     sets: [[-1, -1], [-1, -1], [-1, -1]], scoreErr: '', result: null,
     editOpen: false, editVal: '', editErr: '', clearOpen: false, clearHistOpen: false, sync: 'syncing', delOpen: false, importMsg: '', boardBy: 'doubles', playedLevel: false,
   };
-  ptProb(diff) { return Math.min(0.95, 0.5 + diff / 400); }
+  ptProb(diff) { return Math.min(0.95, 0.5 + diff / 250); }
   gameProb(p) { const q = 1 - p; return Math.pow(p, 4) * (1 + 4 * q + 10 * q * q) + 20 * Math.pow(p, 3) * Math.pow(q, 3) * p * p / (1 - 2 * p * q); }
   tbProb(p) { const q = 1 - p, C = [1, 7, 28, 84, 210, 462]; let s = 0; for (let k = 0; k <= 5; k++) s += C[k] * Math.pow(p, 7) * Math.pow(q, k); return s + 924 * Math.pow(p, 6) * Math.pow(q, 6) * p * p / (1 - 2 * p * q); }
   setProb(p, pg) { const qg = 1 - pg, C = [1, 6, 21, 56, 126]; let s = 0; for (let k = 0; k <= 4; k++) s += C[k] * Math.pow(pg, 6) * Math.pow(qg, k); return s + 252 * Math.pow(pg, 5) * Math.pow(qg, 5) * (pg * pg + 2 * pg * qg * this.tbProb(p)); }
