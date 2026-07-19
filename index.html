@@ -301,7 +301,7 @@ a{color:var(--color-accent-700);text-decoration:none;} a:hover{color:var(--color
                   <div style="font:700 12px var(--font-heading);letter-spacing:1.5px;text-transform:uppercase;">New player</div>
                   <input class="input" placeholder="Full name" value="{{ addName }}" onChange="{{ onAddName }}">
                   <input class="input" placeholder="Starting handicap, 0–100 (sets singles and doubles)" inputMode="decimal" value="{{ addHcp }}" onChange="{{ onAddHcp }}">
-                  <div style="font-size:12px;color:var(--color-neutral-700);">Assign from the scale: 0–9 county, 10–20 first team, 21–33 solid club, 34–50 social, 51–66 improver, 67–83 beginner, 84–100 new. Provisional for the first {{ provN }} matches — adjustments doubled.</div>
+                  <div style="font-size:12px;color:var(--color-neutral-700);">Assign from the scale: 0–5 county, 6–15 first team, 16–29 strong club, 30–44 solid club, 45–58 social, 59–71 improver, 72–84 beginner, 85–100 new. NTRP seeds: 5.0 → 8, 4.5 → 22, 4.0 → 37, 3.5 → 52, 3.0 → 65, 2.5 → 77 (or 2.5 × WTN). Provisional for the first {{ provN }} matches — adjustments doubled.</div>
                   <div style="display:flex;gap:10px;">
                     <button class="btn btn-primary" onClick="{{ addPlayer }}" style="min-height:44px;">Confirm</button>
                     <button class="btn btn-ghost" onClick="{{ toggleAdd }}" style="min-height:44px;">Cancel</button>
@@ -648,8 +648,12 @@ class Component extends DCLogic {
   startFor(r) { return r === 0 ? 'Level' : r === 10 ? '15\u2013love' : r === 20 ? '30\u2013love' : r === 90 ? '30 / minus 30' : '30 / minus 15'; }
   restrFor(r) { return this.CODES.filter(c => r >= c.from); }
   band(h) {
-    if (h < 10) return 'County'; if (h < 21) return 'First team'; if (h < 34) return 'Solid club';
-    if (h < 51) return 'Social'; if (h < 67) return 'Improver'; if (h < 84) return 'Beginner'; return 'New';
+    if (h <= 5) return 'County'; if (h <= 15) return 'First team'; if (h <= 29) return 'Strong club';
+    if (h <= 44) return 'Solid club'; if (h <= 58) return 'Social'; if (h <= 71) return 'Improver'; if (h <= 84) return 'Beginner'; return 'New';
+  }
+  ntrp(h) {
+    if (h <= 5) return '5.5+'; if (h <= 15) return '5.0'; if (h <= 29) return '4.5';
+    if (h <= 44) return '4.0'; if (h <= 58) return '3.5'; if (h <= 71) return '3.0'; if (h <= 84) return '2.5'; return '1.0\u20132.0';
   }
   pById(id) { return this.state.data.players.find(p => p.id === id); }
   names(ids) { return ids.map(id => { const p = this.pById(id); return p ? p.name : '?'; }).join(' / '); }
@@ -674,7 +678,7 @@ class Component extends DCLogic {
     if (st.sel) {
       const p = this.pById(st.sel);
       if (p) {
-        detailName = p.name; detailHcp = fmt(p.hcp); detailHcpD = fmt(p.hcpD); detailRec = this.rec(p.id); detailBand = this.band(p.hcp); detailProv = this.isProv(p);
+        detailName = p.name; detailHcp = fmt(p.hcp); detailHcpD = fmt(p.hcpD); detailRec = this.rec(p.id); detailBand = this.band(p.hcp) + ' · NTRP ' + this.ntrp(p.hcp); detailProv = this.isProv(p);
         detailHist = [...p.hist].reverse().map(h => ({
           date: h.d, label: h.label, after: h.after.toFixed(1),
           delta: h.delta === 0 ? '\u2014' : (h.delta > 0 ? '+' : '\u2212') + Math.abs(h.delta).toFixed(1),
