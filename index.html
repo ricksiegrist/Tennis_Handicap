@@ -641,9 +641,10 @@ class Component extends DCLogic {
     editOpen: false, editVal: '', editErr: '', clearOpen: false, clearHistOpen: false,
   };
   levelPredict(diff, strongN) {
-    const g = Math.max(0, Math.round(6 - diff / 10));
-    if (g >= 6) return 'Dead level — could go either way, likely tie-break sets (7\u20136 either side).';
-    return 'about 6\u2013' + g + ', 6\u2013' + g + ' to ' + strongN + ' (roughly one game per set per 10 of difference).';
+    const g = 6 - diff / 10;
+    if (g >= 5.5) return 'Dead level — could go either way, likely tie-break sets (7\u20136 either side).';
+    const g1 = Math.max(0, Math.floor(g)), g2 = Math.max(0, Math.ceil(g));
+    return 'about 6\u2013' + g1 + ', 6\u2013' + g2 + ' to ' + strongN + ' (roughly one game per set per 10 of difference).';
   }
   startFor(r) { return r === 0 ? 'Level' : r === 10 ? '15\u2013love' : r === 20 ? '30\u2013love' : r === 90 ? '30 / minus 30' : '30 / minus 15'; }
   restrFor(r) { return this.CODES.filter(c => r >= c.from); }
