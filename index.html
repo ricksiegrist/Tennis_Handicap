@@ -583,7 +583,20 @@ a{color:var(--color-accent-700);text-decoration:none;} a:hover{color:var(--color
                 </div>
               </sc-if>
               <sc-if value="{{ clearClosed }}" hint-placeholder-val="{{ true }}">
-                <button class="btn btn-secondary" onClick="{{ openClear }}" style="min-height:44px;">Clear match log</button>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                  <button class="btn btn-secondary" onClick="{{ openClear }}" style="min-height:44px;">Clear match log</button>
+                  <button class="btn btn-ghost" onClick="{{ openWipe }}" style="min-height:44px;color:var(--color-accent-700);">Delete all data</button>
+                </div>
+                <sc-if value="{{ wipeOpen }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;flex-direction:column;gap:10px;margin-top:12px;">
+                    <div style="border:2px solid var(--color-accent);padding:10px 12px;font-size:13px;color:var(--color-accent-700);">This wipes everything — all players, handicaps, history and matches — on every phone via the shared database. It cannot be undone. Type DELETE to confirm.</div>
+                    <input class="input" value="{{ wipeVal }}" onChange="{{ onWipeVal }}" placeholder="Type DELETE" style="min-height:44px;">
+                    <div style="display:flex;gap:10px;">
+                      <button class="btn btn-primary" onClick="{{ doWipe }}" style="min-height:44px;">Delete all data</button>
+                      <button class="btn btn-ghost" onClick="{{ closeWipe }}" style="min-height:44px;">Cancel</button>
+                    </div>
+                  </div>
+                </sc-if>
               </sc-if>
             </div>
           </sc-if>
@@ -752,7 +765,7 @@ class Component extends DCLogic {
     tab: 'roster', sel: null, addOpen: false, addName: '', addHcp: '',
     mType: 'singles', a1: '', a2: '', b1: '', b2: '', phase: 'setup',
     sets: [[-1, -1], [-1, -1], [-1, -1]], scoreErr: '', result: null,
-    editOpen: false, editVal: '', editErr: '', clearOpen: false, clearHistOpen: false, sync: 'syncing', delOpen: false, importMsg: '', boardBy: 'doubles', playedLevel: false,
+    editOpen: false, editVal: '', editErr: '', clearOpen: false, clearHistOpen: false, wipeOpen: false, wipeVal: '', sync: 'syncing', delOpen: false, importMsg: '', boardBy: 'doubles', playedLevel: false,
   };
   ptProb(diff) { return Math.min(0.95, 0.5 + diff / 155); }
   gameProb(p) { const q = 1 - p; return Math.pow(p, 4) * (1 + 4 * q + 10 * q * q) + 20 * Math.pow(p, 3) * Math.pow(q, 3) * p * p / (1 - 2 * p * q); }
@@ -1070,6 +1083,16 @@ class Component extends DCLogic {
       openClear: () => set({ clearOpen: true }),
       closeClear: () => set({ clearOpen: false }),
       clearLog: () => { const nd = { ...data, matches: [] }; this.persist(nd); set({ data: nd, clearOpen: false }); },
+      wipeOpen: st.wipeOpen, wipeVal: st.wipeVal,
+      openWipe: () => set({ wipeOpen: true, wipeVal: '' }),
+      closeWipe: () => set({ wipeOpen: false, wipeVal: '' }),
+      onWipeVal: e => set({ wipeVal: e.target.value }),
+      doWipe: () => {
+        if (this.state.wipeVal.trim().toUpperCase() !== 'DELETE') return;
+        const nd = { players: [], matches: [] };
+        this.persist(nd);
+        set({ data: nd, wipeOpen: false, wipeVal: '', sel: null, a1: '', a2: '', b1: '', b2: '' });
+      },
       cRoster: tabC('roster'), cNew: tabC('new'), cLog: tabC('log'), cBoard: tabC('board'),
       goRosterTab: () => set({ tab: 'roster', sel: null }),
       goNewTab: () => set({ tab: 'new' }),
