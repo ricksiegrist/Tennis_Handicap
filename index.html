@@ -902,17 +902,18 @@ class Component extends DCLogic {
       (m.sets || []).forEach(([a, b]) => { ga += a; gb += b; });
       const win = m.win;
       const gw = win === 'a' ? ga : gb, gl = win === 'a' ? gb : ga;
-      let base = gw >= 2 * gl ? 1.5 : 0.5, note = gw >= 2 * gl ? 'big' : '';
+      let base = gw >= 2 * gl ? 1.5 : 0.5, note = gw >= 2 * gl ? 'big' : '', weakIdsR = null;
       if (/Level \(by choice\)/.test(m.start || '')) {
         const hA = avg(A, type), hB = avg(B, type), diffL = Math.abs(hA - hB);
         const weakSide = hA >= hB ? 'a' : 'b';
+        const weakArrR = weakSide === 'a' ? A : B;
         const setsN = (m.sets || []).length || 1;
         const actWeak = (weakSide === 'a' ? ga : gb) / setsN;
         const cg = this.gameProb(this.ptProb(diffL));
         const expWeak = Math.min(5, 6 * (1 - cg) / cg);
         if (diffL <= 4) note = 'played level, sides even';
-        else if (win === weakSide) { base = 1.5; note = 'upset at level'; }
-        else if (actWeak > expWeak + 0.5) { base = 0.5; note = 'closer than predicted at level'; }
+        else if (win === weakSide) { base = 1.5; note = 'upset at level'; weakIdsR = weakArrR; }
+        else if (actWeak > expWeak + 0.5) { base = 0.5; note = 'better than rated at level'; weakIdsR = weakArrR; }
         else { base = 0; note = 'expected result at level \u2014 no change'; }
       }
       const winIds = win === 'a' ? A : B, loseIds = win === 'a' ? B : A;
@@ -922,7 +923,8 @@ class Component extends DCLogic {
         const w = winIds.includes(id), p = this.pById(id);
         const prov = p && p.prov === false ? false : p && p.prov === true ? true : (cnt[id].pm + cnt[id][type]) < provN;
         let mag = Math.round(base * (dbl && halve ? 0.5 : 1) * (prov ? 2 : 1) * 10) / 10;
-        const delta = mag === 0 ? 0 : (w ? -mag : mag);
+        const downR = weakIdsR ? weakIdsR.includes(id) : w;
+        const delta = mag === 0 ? 0 : (downR ? -mag : mag);
         const before = cur[id][type];
         const after = Math.round(Math.max(0, Math.min(100, before + delta)) * 10) / 10;
         cur[id][type] = after;
@@ -1023,15 +1025,16 @@ class Component extends DCLogic {
       const win = sa > sb ? 'a' : 'b';
       const gw = win === 'a' ? ga : gb, gl = win === 'a' ? gb : ga;
       const big = gw >= 2 * gl;
-      let base = big ? 1.5 : 0.5, levelNote = '';
+      let base = big ? 1.5 : 0.5, levelNote = '', weakIds = null;
       if (cur.playedLevel) {
         const hA2 = this.sideHcp(A, dbl), hB2 = this.sideHcp(B, dbl), diffL = Math.round(Math.abs(hA2 - hB2) * 10) / 10;
         const weakSide = hA2 >= hB2 ? 'a' : 'b';
+        const weakArr = weakSide === 'a' ? A : B;
         const setsN = played.length, actWeak = (weakSide === 'a' ? ga : gb) / setsN;
         const cg = this.gameProb(this.ptProb(diffL)); const expWeak = Math.min(5, 6 * (1 - cg) / cg);
         if (diffL <= 4) levelNote = 'played level, sides even';
-        else if (win === weakSide) { base = 1.5; levelNote = 'upset at level'; }
-        else if (actWeak > expWeak + 0.5) { base = 0.5; levelNote = 'closer than predicted at level'; }
+        else if (win === weakSide) { base = 1.5; levelNote = 'upset at level'; weakIds = weakArr; }
+        else if (actWeak > expWeak + 0.5) { base = 0.5; levelNote = 'better than rated at level'; weakIds = weakArr; }
         else { base = 0; levelNote = 'expected result at level — no change'; }
       }
       const winIds = win === 'a' ? A : B, loseIds = win === 'a' ? B : A;
@@ -1045,7 +1048,8 @@ class Component extends DCLogic {
         const prov = this.isProv(p, cur.mType);
         let mag = base * (dbl && halve ? 0.5 : 1) * (prov ? 2 : 1);
         mag = Math.round(mag * 10) / 10;
-        const delta = mag === 0 ? 0 : (w ? -mag : mag);
+        const down = weakIds ? weakIds.includes(p.id) : w;
+        const delta = mag === 0 ? 0 : (down ? -mag : mag);
         const cur0 = dbl ? p.hcpD : p.hcp;
         const after = Math.round(Math.max(0, Math.min(100, cur0 + delta)) * 10) / 10;
         const notes = [];
