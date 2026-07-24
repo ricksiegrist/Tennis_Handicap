@@ -585,8 +585,23 @@ a{color:var(--color-accent-700);text-decoration:none;} a:hover{color:var(--color
               <sc-if value="{{ clearClosed }}" hint-placeholder-val="{{ true }}">
                 <div style="display:flex;gap:10px;flex-wrap:wrap;">
                   <button class="btn btn-secondary" onClick="{{ openClear }}" style="min-height:44px;">Clear match log</button>
+                  <label for="match-file" class="btn btn-secondary" style="min-height:44px;cursor:pointer;">Import matches from Excel</label>
+                  <input id="match-file" type="file" accept=".xlsx,.xls,.csv" onChange="{{ onMatchFile }}" style="display:none;">
+                  <button class="btn btn-secondary" onClick="{{ openRecalc }}" style="min-height:44px;">Recalculate handicaps</button>
                   <button class="btn btn-ghost" onClick="{{ openWipe }}" style="min-height:44px;color:var(--color-accent-700);">Delete all data</button>
                 </div>
+                <sc-if value="{{ recalcOpen }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;flex-direction:column;gap:10px;margin-top:12px;">
+                    <div style="border:2px solid var(--color-text);padding:10px 12px;font-size:13px;">Replays every match in the log from each player’s starting handicap using the current rules, then rewrites their handicaps and history. Manual corrections and spreadsheet imports are kept in place. Matches themselves are not changed.</div>
+                    <div style="display:flex;gap:10px;">
+                      <button class="btn btn-primary" onClick="{{ doRecalc }}" style="min-height:44px;">Recalculate now</button>
+                      <button class="btn btn-ghost" onClick="{{ closeRecalc }}" style="min-height:44px;">Cancel</button>
+                    </div>
+                  </div>
+                </sc-if>
+                <div style="font-size:12px;color:var(--color-neutral-700);margin-top:10px;">Match sheet columns: Date, Type, A1, A2, B1, B2, Score, Level. Score reads from side A — “6-4 6-3”. Type is singles or doubles (blank infers from whether partners are named); leave A2/B2 empty for singles; Level = y when the match ignored the handicap starts. Names must match the roster.</div>
+                <sc-if value="{{ mImportMsgShow }}" hint-placeholder-val="{{ false }}"><div style="border:2px solid var(--color-text);padding:10px 12px;font-size:13px;margin-top:10px;">{{ mImportMsg }}</div></sc-if>
+                <sc-if value="{{ recalcMsgShow }}" hint-placeholder-val="{{ false }}"><div style="border:2px solid var(--color-text);padding:10px 12px;font-size:13px;margin-top:10px;">{{ recalcMsg }}</div></sc-if>
                 <sc-if value="{{ wipeOpen }}" hint-placeholder-val="{{ false }}">
                   <div style="display:flex;flex-direction:column;gap:10px;margin-top:12px;">
                     <div style="border:2px solid var(--color-accent);padding:10px 12px;font-size:13px;color:var(--color-accent-700);">This wipes everything — all players, handicaps, history and matches — on every phone via the shared database. It cannot be undone. Type DELETE to confirm.</div>
@@ -765,7 +780,7 @@ class Component extends DCLogic {
     tab: 'roster', sel: null, addOpen: false, addName: '', addHcp: '',
     mType: 'singles', a1: '', a2: '', b1: '', b2: '', phase: 'setup',
     sets: [[-1, -1], [-1, -1], [-1, -1]], scoreErr: '', result: null,
-    editOpen: false, editVal: '', editErr: '', clearOpen: false, clearHistOpen: false, wipeOpen: false, wipeVal: '', sync: 'syncing', delOpen: false, importMsg: '', boardBy: 'doubles', playedLevel: false,
+    editOpen: false, editVal: '', editErr: '', clearOpen: false, clearHistOpen: false, wipeOpen: false, wipeVal: '', recalcOpen: false, recalcMsg: '', mImportMsg: '', sync: 'syncing', delOpen: false, importMsg: '', boardBy: 'doubles', playedLevel: false,
   };
   ptProb(diff) { return Math.min(0.95, 0.5 + diff / 155); }
   gameProb(p) { const q = 1 - p; return Math.pow(p, 4) * (1 + 4 * q + 10 * q * q) + 20 * Math.pow(p, 3) * Math.pow(q, 3) * p * p / (1 - 2 * p * q); }
@@ -801,9 +816,136 @@ class Component extends DCLogic {
   }
   pById(id) { return this.state.data.players.find(p => p.id === id); }
   names(ids) { return ids.map(id => { const p = this.pById(id); return p ? p.name : '?'; }).join(' / '); }
-  recCount(pid) { return this.state.data.matches.filter(m => m.a.includes(pid) || m.b.includes(pid)).length; }
-  isProv(p) { if (p.prov === false) return false; if (p.prov === true) return true; return (p.pm || 0) + this.recCount(p.id) < (this.props.provisionalMatches ?? 10); }
-  sideHcp(ids, dbl) { const hs = ids.map(id => { const p = this.pById(id); return dbl ? p.hcpD : p.hcp; }); return Math.round(hs.reduce((a, b) => a + b, 0) / hs.length); }
+  applyMatchImport(rows) {
+    const norm = s => String(s == null ? '' : s).trim();
+    const data = this.state.data;
+    const byName = {};
+    data.players.forEach(p => byName[p.name.toLowerCase()] = p.id);
+    const head = (rows[0] || []).map(c => norm(c).toLowerCase());
+    const hasHead = head.some(c => /date|type|score/.test(c));
+    const col = re => { const i = head.findIndex(c => re.test(c)); return i; };
+    let cDate = 0, cType = 1, cA1 = 2, cA2 = 3, cB1 = 4, cB2 = 5, cScore = 6, cLevel = 7, start = 0;
+    if (hasHead) {
+      cDate = col(/date/); cType = col(/type/);
+      cA1 = col(/^a1|side a 1|team a 1|a player 1/); cA2 = col(/^a2|side a 2|team a 2|a player 2/);
+      cB1 = col(/^b1|side b 1|team b 1|b player 1/); cB2 = col(/^b2|side b 2|team b 2|b player 2/);
+      cScore = col(/score|sets/); cLevel = col(/level/);
+      start = 1;
+    }
+    const at = (r, i) => i >= 0 ? norm(r[i]) : '';
+    const out = []; const skipped = [];
+    for (let i = start; i < rows.length; i++) {
+      const r = rows[i] || [];
+      const a1 = at(r, cA1), b1 = at(r, cB1), a2 = at(r, cA2), b2 = at(r, cB2), sc = at(r, cScore);
+      if (!a1 && !b1) continue;
+      const ids = [a1, a2, b1, b2].map(n => n ? byName[n.toLowerCase()] : null);
+      const unknown = [a1, a2, b1, b2].filter((n, k) => n && !ids[k]);
+      if (unknown.length) { skipped.push('row ' + (i + 1) + ' (unknown: ' + unknown.join(', ') + ')'); continue; }
+      const sets = (sc.match(/\d+\s*[-\u2013:]\s*\d+/g) || []).map(s => s.split(/[-\u2013:]/).map(x => parseInt(x, 10)));
+      const played = sets.filter(s => s.length === 2 && !isNaN(s[0]) && !isNaN(s[1]) && s[0] !== s[1]);
+      if (!played.length) { skipped.push('row ' + (i + 1) + ' (no score)'); continue; }
+      let sa = 0, sb = 0;
+      played.forEach(([x, y]) => x > y ? sa++ : sb++);
+      if (sa === sb) { skipped.push('row ' + (i + 1) + ' (score not decisive)'); continue; }
+      const typeRaw = at(r, cType).toLowerCase();
+      const dbl = typeRaw ? /doub/.test(typeRaw) : !!(ids[1] && ids[3]);
+      if (dbl && !(ids[1] && ids[3])) { skipped.push('row ' + (i + 1) + ' (doubles needs four players)'); continue; }
+      const dRaw = at(r, cDate);
+      let d = new Date().toISOString().slice(0, 10);
+      if (dRaw) {
+        const parsed = /^\d{4}-\d{2}-\d{2}/.test(dRaw) ? dRaw.slice(0, 10) : (!isNaN(Date.parse(dRaw)) ? new Date(dRaw).toISOString().slice(0, 10) : null);
+        if (parsed) d = parsed;
+      }
+      const lvl = /^(y|yes|true|1|level)/i.test(at(r, cLevel));
+      out.push({
+        id: 'm' + Date.now() + '_' + i, d, type: dbl ? 'doubles' : 'singles',
+        a: dbl ? [ids[0], ids[1]] : [ids[0]], b: dbl ? [ids[2], ids[3]] : [ids[2]],
+        sets: played, win: sa > sb ? 'a' : 'b',
+        start: lvl ? 'Level (by choice)' : 'Imported', mv: '',
+      });
+    }
+    if (!out.length) { this.setState({ mImportMsg: 'No usable rows. Expected columns: Date, Type, A1, A2, B1, B2, Score, Level.' + (skipped.length ? ' Skipped ' + skipped.join('; ') + '.' : '') }); return; }
+    const nd = { ...data, matches: [...data.matches, ...out].sort((x, y) => x.d < y.d ? -1 : x.d > y.d ? 1 : 0) };
+    this.setState({ data: nd, mImportMsg: 'Imported ' + out.length + ' match' + (out.length === 1 ? '' : 'es') + (skipped.length ? '. Skipped ' + skipped.join('; ') + '.' : '.') + ' Handicaps rebuilt from the full log.' }, () => this.recalcAll());
+  }
+  recalcAll() {
+    const data = this.state.data;
+    const provN = this.props.provisionalMatches ?? 10;
+    const halve = this.props.halveDoubles ?? true;
+    const cur = {}, hist = {}, cnt = {};
+    data.players.forEach(p => {
+      const seed = p.hist && p.hist.length ? p.hist[0].after : p.hcp;
+      cur[p.id] = { singles: seed, doubles: seed };
+      hist[p.id] = p.hist && p.hist.length ? [p.hist[0]] : [];
+      cnt[p.id] = { singles: 0, doubles: 0, pm: p.pm || 0 };
+    });
+    const mvFix = {};
+    const events = [];
+    data.players.forEach(p => (p.hist || []).slice(1).forEach(h => {
+      if (!/^\[/.test(h.label || '')) events.push({ d: h.d, k: 0, pid: p.id, h });
+    }));
+    data.matches.forEach(m => events.push({ d: m.d, k: 1, m }));
+    events.sort((x, y) => x.d < y.d ? -1 : x.d > y.d ? 1 : x.k - y.k);
+    const avg = (ids, type) => Math.round(ids.reduce((s, id) => s + (cur[id] ? cur[id][type] : 0), 0) / ids.length * 10) / 10;
+    events.forEach(ev => {
+      if (ev.k === 0) {
+        const c = cur[ev.pid]; if (!c) return;
+        const isD = /doubles/i.test(ev.h.label || '');
+        c[isD ? 'doubles' : 'singles'] = ev.h.after;
+        hist[ev.pid].push(ev.h);
+        return;
+      }
+      const m = ev.m, type = m.type === 'doubles' ? 'doubles' : 'singles', dbl = type === 'doubles';
+      const A = m.a.filter(id => cur[id]), B = m.b.filter(id => cur[id]);
+      if (!A.length || !B.length) return;
+      let ga = 0, gb = 0;
+      (m.sets || []).forEach(([a, b]) => { ga += a; gb += b; });
+      const win = m.win;
+      const gw = win === 'a' ? ga : gb, gl = win === 'a' ? gb : ga;
+      let base = gw >= 2 * gl ? 1.5 : 0.5, note = gw >= 2 * gl ? 'big' : '';
+      if (/Level \(by choice\)/.test(m.start || '')) {
+        const hA = avg(A, type), hB = avg(B, type), diffL = Math.abs(hA - hB);
+        const weakSide = hA >= hB ? 'a' : 'b';
+        const setsN = (m.sets || []).length || 1;
+        const actWeak = (weakSide === 'a' ? ga : gb) / setsN;
+        const cg = this.gameProb(this.ptProb(diffL));
+        const expWeak = Math.min(5, 6 * (1 - cg) / cg);
+        if (diffL <= 4) note = 'played level, sides even';
+        else if (win === weakSide) { base = 1.5; note = 'upset at level'; }
+        else if (actWeak > expWeak + 0.5) { base = 0.5; note = 'closer than predicted at level'; }
+        else { base = 0; note = 'expected result at level \u2014 no change'; }
+      }
+      const winIds = win === 'a' ? A : B, loseIds = win === 'a' ? B : A;
+      const scoreStr = (m.sets || []).map(([a, b]) => (win === 'a' ? a + '\u2013' + b : b + '\u2013' + a)).join(', ');
+      const mvW = [], mvL = [];
+      [...winIds, ...loseIds].forEach(id => {
+        const w = winIds.includes(id), p = this.pById(id);
+        const prov = p && p.prov === false ? false : p && p.prov === true ? true : (cnt[id].pm + cnt[id][type]) < provN;
+        let mag = Math.round(base * (dbl && halve ? 0.5 : 1) * (prov ? 2 : 1) * 10) / 10;
+        const delta = mag === 0 ? 0 : (w ? -mag : mag);
+        const before = cur[id][type];
+        const after = Math.round(Math.max(0, Math.min(100, before + delta)) * 10) / 10;
+        cur[id][type] = after;
+        const notes = [];
+        if (note && note !== 'big') notes.push(note); else if (note === 'big') notes.push(w ? 'big win' : 'big loss');
+        if (dbl && halve) notes.push('doubles \u00d7\u00bd');
+        if (prov) notes.push('provisional \u00d72');
+        if (delta !== 0) (w ? mvW : mvL).push((delta < 0 ? '\u2212' : '+') + Math.abs(delta).toFixed(1));
+        hist[id].push({ d: m.d, label: '[' + type + '] ' + (w ? 'def. ' : 'lost to ') + this.names(w ? loseIds : winIds) + ' ' + scoreStr + ' (' + notes.join(', ') + ')', delta, after });
+      });
+      const uq = arr => [...new Set(arr)].join('/');
+      mvFix[m.id] = (mvW.length || mvL.length) ? (uq(mvW) + ' / ' + uq(mvL)) : 'no change';
+      [...A, ...B].forEach(id => cnt[id][type]++);
+    });
+    const players = data.players.map(p => cur[p.id] ? { ...p, hcp: cur[p.id].singles, hcpD: cur[p.id].doubles, hist: hist[p.id] } : p);
+    const matches = data.matches.map(m => mvFix[m.id] ? { ...m, mv: mvFix[m.id] } : m);
+    const nd = { ...data, players, matches };
+    this.persist(nd);
+    this.setState({ data: nd, recalcOpen: false, recalcMsg: 'Rebuilt ' + players.length + ' player records from ' + data.matches.length + ' matches.' });
+  }
+  recCount(pid, type) { return this.state.data.matches.filter(m => (m.a.includes(pid) || m.b.includes(pid)) && (!type || m.type === type)).length; }
+  isProv(p, type) { if (p.prov === false) return false; if (p.prov === true) return true; return (p.pm || 0) + this.recCount(p.id, type) < (this.props.provisionalMatches ?? 10); }
+  sideHcp(ids, dbl) { const hs = ids.map(id => { const p = this.pById(id); return dbl ? p.hcpD : p.hcp; }); return Math.round(hs.reduce((a, b) => a + b, 0) / hs.length * 10) / 10; }
   rec(pid) { let w = 0, l = 0; this.state.data.matches.forEach(m => { const inA = m.a.includes(pid), inB = m.b.includes(pid); if (!inA && !inB) return; ((m.win === 'a') === inA) ? w++ : l++; }); return w + '\u2013' + l; }
   persist(data) { try { localStorage.setItem(this.KEY, JSON.stringify(data)); } catch (e) { } this.cloudPush(data); }
   renderVals() {
@@ -838,14 +980,14 @@ class Component extends DCLogic {
     if (dup) setupErr = 'Each player can only appear once in the match.';
     else if (chosen.length === need.length) {
       const A = dbl ? [st.a1, st.a2] : [st.a1], B = dbl ? [st.b1, st.b2] : [st.b1];
-      const ha = this.sideHcp(A, dbl), hb = this.sideHcp(B, dbl), diff = Math.abs(ha - hb);
+      const ha = this.sideHcp(A, dbl), hb = this.sideHcp(B, dbl), diffTrue = Math.round(Math.abs(ha - hb) * 10) / 10, diff = Math.round(diffTrue);
       const weak = ha >= hb ? A : B, strong = ha >= hb ? B : A;
       const weakN = this.names(weak), strongN = this.names(strong);
       if (diff >= 65) {
         odds = {
           playable: false, start: 'Coaching formats', recv: 'Difference ' + diff + ' is 65 or over — use coaching formats or a committee-designed handicap.',
           note: '', restr: [], tie: 'Record nothing for handicap.',
-          diffLine: 'Difference ' + diff + (dbl ? ' — pair averages ' + ha + ' vs ' + hb : ''), codesShort: '',
+          diffLine: 'Difference ' + diffTrue + (dbl ? ' — pair averages ' + ha.toFixed(1) + ' vs ' + hb.toFixed(1) : ''), codesShort: '',
           level: this.levelPredict(diff, strongN),
         };
       } else {
@@ -857,7 +999,7 @@ class Component extends DCLogic {
           recv: diff <= 4 ? 'Sides are close — play level.' : weakN + (weak.length > 1 ? ' start' : ' starts') + ' every game ahead (weaker score first).',
           note: bandRow.owe ? 'Owe 15: ' + strongN + ' must win one point to reach love.' : '',
           restr, tie: 'Tie-break at 6–6: ' + (tn === 0 ? 'level start (restrictions still apply; owe scores do not).' : weakN + (weak.length > 1 ? ' lead ' : ' leads ') + tn + '–0 (restrictions still apply; owe scores do not).'),
-          diffLine: 'Difference ' + diff + (dbl ? ' — pair averages ' + ha + ' vs ' + hb : ''),
+          diffLine: 'Difference ' + diffTrue + (dbl ? ' — pair averages ' + ha.toFixed(1) + ' vs ' + hb.toFixed(1) : ''),
           codesShort: restr.length ? ' · ' + restr.map(c => c.code).join(' ') : '',
           startLabel: bandRow.start, r: diff,
           level: this.levelPredict(diff, strongN),
@@ -883,7 +1025,7 @@ class Component extends DCLogic {
       const big = gw >= 2 * gl;
       let base = big ? 1.5 : 0.5, levelNote = '';
       if (cur.playedLevel) {
-        const hA2 = this.sideHcp(A, dbl), hB2 = this.sideHcp(B, dbl), diffL = Math.abs(hA2 - hB2);
+        const hA2 = this.sideHcp(A, dbl), hB2 = this.sideHcp(B, dbl), diffL = Math.round(Math.abs(hA2 - hB2) * 10) / 10;
         const weakSide = hA2 >= hB2 ? 'a' : 'b';
         const setsN = played.length, actWeak = (weakSide === 'a' ? ga : gb) / setsN;
         const cg = this.gameProb(this.ptProb(diffL)); const expWeak = Math.min(5, 6 * (1 - cg) / cg);
@@ -900,10 +1042,10 @@ class Component extends DCLogic {
       const playersNew = data.players.map(p => {
         const w = winIds.includes(p.id), l = loseIds.includes(p.id);
         if (!w && !l) return p;
-        const prov = this.isProv(p);
+        const prov = this.isProv(p, cur.mType);
         let mag = base * (dbl && halve ? 0.5 : 1) * (prov ? 2 : 1);
         mag = Math.round(mag * 10) / 10;
-        const delta = w ? -mag : mag;
+        const delta = mag === 0 ? 0 : (w ? -mag : mag);
         const cur0 = dbl ? p.hcpD : p.hcp;
         const after = Math.round(Math.max(0, Math.min(100, cur0 + delta)) * 10) / 10;
         const notes = [];
@@ -913,15 +1055,17 @@ class Component extends DCLogic {
         adj.push({
           name: p.name, note: notes.length ? '(' + notes.join(', ') + ')' : '',
           from: cur0.toFixed(1), to: after.toFixed(1),
-          delta: (delta < 0 ? '\u2212' : '+') + Math.abs(delta).toFixed(1),
+          delta: (delta === 0 ? '' : delta < 0 ? '\u2212' : '+') + Math.abs(delta).toFixed(1),
           color: delta < 0 ? 'var(--color-accent-700)' : 'var(--color-neutral-800)',
         });
         const label = (dbl ? '[doubles] ' : '[singles] ') + (w ? 'def. ' : 'lost to ') + this.names(w ? loseIds : winIds) + ' ' + scoreStr + (notes.length ? ' (' + notes.join(', ') + ')' : '');
         return { ...p, [dbl ? 'hcpD' : 'hcp']: after, hist: [...p.hist, { d: today, label, delta, after }] };
       });
       const startLabel = cur.playedLevel ? 'Level (by choice)' : (odds && odds.playable ? odds.start + (odds.codesShort || '') : 'Level');
-      const wAdj = adj.find(x => x.delta.startsWith('\u2212')), lAdj = adj.find(x => x.delta.startsWith('+'));
-      const match = { id: 'm' + Date.now(), d: today, type: cur.mType, a: A, b: B, sets: played, start: startLabel, win, mv: (wAdj ? wAdj.delta : '') + ' / ' + (lAdj ? lAdj.delta : '') };
+      const uniq = arr => [...new Set(arr)].join('/');
+      const wAdj = uniq(adj.filter(x => x.delta.startsWith('\u2212')).map(x => x.delta));
+      const lAdj = uniq(adj.filter(x => x.delta.startsWith('+')).map(x => x.delta));
+      const match = { id: 'm' + Date.now(), d: today, type: cur.mType, a: A, b: B, sets: played, start: startLabel, win, mv: (wAdj || lAdj) ? (wAdj + ' / ' + lAdj) : 'no change' };
       const nd = { players: playersNew, matches: [...data.matches, match] };
       this.persist(nd);
       set({
@@ -948,7 +1092,7 @@ class Component extends DCLogic {
         date: m.d, title: this.names(wIds) + ' def. ' + this.names(lIds),
         score: m.sets.map(([a, b]) => (m.win === 'a' ? a + '\u2013' + b : b + '\u2013' + a)).join(', '),
         tag: (m.type === 'doubles' ? 'DOUBLES' : 'SINGLES') + ' · STARTED ' + m.start.toUpperCase(),
-        delta: m.mv,
+        delta: (() => { const v = String(m.mv || '').trim(); return (!v || v.startsWith('/') || v.endsWith('/') || /^\s*\/\s*\+?0\.0$/.test(v) || /^\s*\/\s*$/.test(v)) ? 'no change' : v; })(),
       };
     });
     const bd = st.boardBy === 'singles';
@@ -1083,6 +1227,23 @@ class Component extends DCLogic {
       openClear: () => set({ clearOpen: true }),
       closeClear: () => set({ clearOpen: false }),
       clearLog: () => { const nd = { ...data, matches: [] }; this.persist(nd); set({ data: nd, clearOpen: false }); },
+      mImportMsg: st.mImportMsg, mImportMsgShow: !!st.mImportMsg,
+      onMatchFile: e => {
+        const file = e.target.files && e.target.files[0];
+        e.target.value = '';
+        if (!file) return;
+        set({ mImportMsg: 'Reading ' + file.name + '\u2026' });
+        const fail = () => set({ mImportMsg: 'Could not read that file. Save it as .xlsx or .csv and try again.' });
+        if (/\.csv$/i.test(file.name)) file.text().then(x => this.applyMatchImport(x.split(/\r?\n/).map(l => l.split(',')))).catch(fail);
+        else this.loadXLSX().then(X => file.arrayBuffer().then(buf => {
+          const wb = X.read(buf, { type: 'array', cellDates: true });
+          this.applyMatchImport(X.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: false }));
+        })).catch(fail);
+      },
+      recalcOpen: st.recalcOpen, recalcMsg: st.recalcMsg, recalcMsgShow: !!st.recalcMsg,
+      openRecalc: () => set({ recalcOpen: true, recalcMsg: '' }),
+      closeRecalc: () => set({ recalcOpen: false }),
+      doRecalc: () => this.recalcAll(),
       wipeOpen: st.wipeOpen, wipeVal: st.wipeVal,
       openWipe: () => set({ wipeOpen: true, wipeVal: '' }),
       closeWipe: () => set({ wipeOpen: false, wipeVal: '' }),
