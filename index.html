@@ -572,7 +572,16 @@ a{color:var(--color-accent-700);text-decoration:none;} a:hover{color:var(--color
               <div style="padding:14px 20px;border-top:1px solid var(--color-neutral-300);display:flex;flex-direction:column;gap:3px;">
                 <div style="display:flex;justify-content:space-between;gap:10px;font-size:11px;color:var(--color-neutral-700);letter-spacing:1px;"><span>{{ m.tag }}</span><span>{{ m.date }}</span></div>
                 <div style="font-weight:600;font-size:14px;">{{ m.title }}</div>
-                <div style="display:flex;justify-content:space-between;gap:10px;"><span style="font:700 14px var(--font-heading);color:var(--color-accent-700);">{{ m.score }}</span><span style="font-size:12px;color:var(--color-neutral-700);">{{ m.delta }}</span></div>
+                <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;"><span style="font:700 14px var(--font-heading);color:var(--color-accent-700);">{{ m.score }}</span><span style="font-size:12px;color:var(--color-neutral-700);margin-left:auto;">{{ m.delta }}</span><button class="btn btn-ghost" onClick="{{ m.askDel }}" style="min-height:36px;padding:0 10px;font-size:11px;color:var(--color-accent-700);">Delete</button></div>
+                <sc-if value="{{ m.confirming }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;flex-direction:column;gap:10px;margin-top:6px;">
+                    <div style="border:2px solid var(--color-accent);padding:10px 12px;font-size:13px;color:var(--color-accent-700);">Delete this match and rebuild every handicap from the remaining log?</div>
+                    <div style="display:flex;gap:10px;">
+                      <button class="btn btn-primary" onClick="{{ m.doDel }}" style="min-height:44px;">Delete and recalculate</button>
+                      <button class="btn btn-ghost" onClick="{{ m.cancelDel }}" style="min-height:44px;">Cancel</button>
+                    </div>
+                  </div>
+                </sc-if>
               </div>
             </sc-for>
             <div style="padding:16px 20px 32px;border-top:2px solid var(--color-divider);">
@@ -783,7 +792,7 @@ class Component extends DCLogic {
     tab: 'roster', sel: null, addOpen: false, addName: '', addHcp: '',
     mType: 'singles', a1: '', a2: '', b1: '', b2: '', phase: 'setup',
     sets: [[-1, -1], [-1, -1], [-1, -1]], scoreErr: '', result: null,
-    editOpen: false, editVal: '', editErr: '', clearOpen: false, clearHistOpen: false, wipeOpen: false, wipeVal: '', recalcOpen: false, recalcMsg: '', mImportMsg: '', sync: 'syncing', delOpen: false, importMsg: '', boardBy: 'doubles', startUsed: 'auto',
+    editOpen: false, editVal: '', editErr: '', clearOpen: false, clearHistOpen: false, wipeOpen: false, wipeVal: '', recalcOpen: false, recalcMsg: '', mImportMsg: '', sync: 'syncing', delOpen: false, importMsg: '', delMatch: '', boardBy: 'doubles', startUsed: 'auto',
   };
   ptProb(diff) { return Math.min(0.95, 0.5 + diff / 155); }
   gameProb(p) { const q = 1 - p; return Math.pow(p, 4) * (1 + 4 * q + 10 * q * q) + 20 * Math.pow(p, 3) * Math.pow(q, 3) * p * p / (1 - 2 * p * q); }
@@ -1126,6 +1135,13 @@ class Component extends DCLogic {
         score: m.sets.map(([a, b]) => (m.win === 'a' ? a + '\u2013' + b : b + '\u2013' + a)).join(', '),
         tag: (m.type === 'doubles' ? 'DOUBLES' : 'SINGLES') + ' · STARTED ' + m.start.toUpperCase(),
         delta: (() => { const v = String(m.mv || '').trim(); return (!v || v.startsWith('/') || v.endsWith('/') || /^\s*\/\s*\+?0\.0$/.test(v) || /^\s*\/\s*$/.test(v)) ? 'no change' : v; })(),
+        confirming: st.delMatch === m.id,
+        askDel: () => set({ delMatch: m.id }),
+        cancelDel: () => set({ delMatch: '' }),
+        doDel: () => {
+          const nd = { ...this.state.data, matches: this.state.data.matches.filter(x => x.id !== m.id) };
+          this.setState({ data: nd, delMatch: '' }, () => this.recalcAll());
+        },
       };
     });
     const bd = st.boardBy === 'singles';
