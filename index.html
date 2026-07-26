@@ -300,8 +300,8 @@ a{color:var(--color-accent-700);text-decoration:none;} a:hover{color:var(--color
                 <div style="display:flex;flex-direction:column;gap:10px;">
                   <div style="font:700 12px var(--font-heading);letter-spacing:1.5px;text-transform:uppercase;">New player</div>
                   <input class="input" placeholder="Full name" value="{{ addName }}" onChange="{{ onAddName }}">
-                  <input class="input" placeholder="Starting handicap, 0–100 (sets singles and doubles)" inputMode="decimal" value="{{ addHcp }}" onChange="{{ onAddHcp }}">
-                  <div style="font-size:12px;color:var(--color-neutral-700);">Assign from the scale: 0–5 county, 6–15 first team, 16–29 strong club, 30–44 solid club, 45–58 social, 59–71 improver, 72–84 beginner, 85–100 new. NTRP seeds: 5.0 → 8, 4.5 → 22, 4.0 → 37, 3.5 → 52, 3.0 → 65, 2.5 → 77 (or 2.5 × WTN). Provisional for the first {{ provN }} matches — adjustments doubled.</div>
+                  <input class="input" placeholder="Starting rating (sets singles and doubles)" inputMode="decimal" value="{{ addHcp }}" onChange="{{ onAddHcp }}">
+                  <div style="font-size:12px;color:var(--color-neutral-700);">Lower is stronger. NTRP seeds: 5.0 → 0, 4.5 → 20, 4.0 → 40, 3.5 → 60, 3.0 → 80, 2.5 → 100 — interpolate for half-steps, and ratings may go below 0 for players above 5.0. Seeding is the only time NTRP is referenced; everything after comes from results.</div>
                   <div style="display:flex;gap:10px;">
                     <button class="btn btn-primary" onClick="{{ addPlayer }}" style="min-height:44px;">Confirm</button>
                     <button class="btn btn-ghost" onClick="{{ toggleAdd }}" style="min-height:44px;">Cancel</button>
@@ -466,7 +466,7 @@ a{color:var(--color-accent-700);text-decoration:none;} a:hover{color:var(--color
                 Back
               </button>
               <div style="font:800 28px var(--font-heading);margin-bottom:4px;">Court-side card</div>
-              <div style="font-size:13px;line-height:1.5;color:var(--color-neutral-800);margin-bottom:16px;">Difference = weaker handicap − stronger handicap; find its row below — no rounding needed. Play every game from the starting score below; the stronger side observes the restrictions. Deuce and advantage as normal. Doubles: pair handicap = average of the two players, rounded to a whole number.</div>
+              <div style="font-size:13px;line-height:1.5;color:var(--color-neutral-800);margin-bottom:16px;">Difference = weaker handicap − stronger handicap, rounded to the nearest 5. Play every game from the starting score below; the stronger side observes the restrictions. At deuce a single deciding point is played and the receiving side chooses which court it is played to. Doubles: pair handicap = average of the two players, and restrictions apply to both players on the stronger side.</div>
               <div style="border-top:2px solid var(--color-text);">
                 <div style="display:grid;grid-template-columns:44px 1fr 84px;gap:8px;padding:8px 0;font:700 11px var(--font-heading);letter-spacing:1px;text-transform:uppercase;border-bottom:2px solid var(--color-text);"><span>Diff.</span><span>Every game starts</span><span>Restrictions</span></div>
                 <sc-for list="{{ rubric }}" as="r" hint-placeholder-count="10">
@@ -477,7 +477,7 @@ a{color:var(--color-accent-700);text-decoration:none;} a:hover{color:var(--color
                   </div>
                 </sc-for>
               </div>
-              <div style="font-size:12px;color:var(--color-neutral-800);padding-top:10px;">Owe 15 — the stronger side must win one point to reach love. Differences of 65 and over: coaching formats or a committee-designed handicap.</div>
+              <div style="font-size:12px;color:var(--color-neutral-800);padding-top:10px;">Owe 15 / 30 / 40 — the stronger side must win one, two or three points before reaching love. Restrictions are nested: each row includes everything from the rows above it. Above 70 the table does not apply — arrange by agreement, and no ratings move.</div>
               <div style="font:700 12px var(--font-heading);letter-spacing:1.5px;text-transform:uppercase;padding:20px 0 6px;">Restriction codes</div>
               <sc-for list="{{ codes }}" as="c" hint-placeholder-count="5">
                 <div style="display:grid;grid-template-columns:28px 1fr;gap:8px;padding:8px 0;border-bottom:1px solid var(--color-neutral-300);font-size:13px;align-items:baseline;">
@@ -485,10 +485,10 @@ a{color:var(--color-accent-700);text-decoration:none;} a:hover{color:var(--color
                   <span>{{ c.text }}</span>
                 </div>
               </sc-for>
-              <div style="font:700 12px var(--font-heading);letter-spacing:1.5px;text-transform:uppercase;padding:20px 0 6px;">Tie-break at 6–6</div>
-              <div style="font-size:13px;line-height:1.55;color:var(--color-neutral-800);">Normal seven-point tie-break; the weaker side starts ahead by 1 mini-point per full 15 of handicap difference, capped at 3 (diff 15–29: leads 1–0; 30–44: 2–0; 45+: 3–0). Minus scores are not used in tie-breaks; restrictions still apply.</div>
+              <div style="font:700 12px var(--font-heading);letter-spacing:1.5px;text-transform:uppercase;padding:20px 0 6px;">Scoring conventions</div>
+              <div style="font-size:13px;line-height:1.55;color:var(--color-neutral-800);">Game ball at deuce: a single deciding point is played, and the receiving side chooses the return court. Advantage scoring may be used by agreement, but must be recorded — it favours the stronger side, so those results carry half weight. A tie-break counts as one game, and a match tie-break played in place of a final set also counts as one game.</div>
               <div style="font:700 12px var(--font-heading);letter-spacing:1.5px;text-transform:uppercase;padding:20px 0 6px;">After the match</div>
-              <div style="font-size:13px;line-height:1.55;color:var(--color-neutral-800);">Win <b style="color:var(--color-text);">−0.5</b>, big win (at least twice the opponent's games) <b style="color:var(--color-text);">−1.5</b>; loss <b style="color:var(--color-text);">+0.5</b>, big loss <b style="color:var(--color-text);">+1.5</b>. Halved for doubles; doubled while provisional (first {{ provN }} recorded matches). Handicaps stay between 0 and 100, kept to one decimal.</div>
+              <div style="font-size:13px;line-height:1.55;color:var(--color-neutral-800);">Ratings move on the loser’s share of the games played. Sets to 6 (summed across a best-of-three): no change at 33% or above, <b style="color:var(--color-text);">±1</b> from 23%, <b style="color:var(--color-text);">±2</b> below 23%. An 8-game pro set shifts those to 38 / 28%, a 10-game pro set to 41 / 31%. The winner’s rating falls and the loser’s rises, never by more than 2 in one match. Unfinished matches use the games actually played on slightly higher thresholds — nothing moves under 6 games, and ±2 needs at least 12. Singles and doubles are rated separately.</div>
             </div>
           </sc-if>
 
@@ -512,6 +512,25 @@ a{color:var(--color-accent-700);text-decoration:none;} a:hover{color:var(--color
                 </select>
               </div>
               <sc-if value="{{ startAltShow }}" hint-placeholder-val="{{ false }}"><div style="font-size:12px;color:var(--color-neutral-700);">{{ startAltNote }}</div></sc-if>
+              <div class="field">
+                <label for="m-format">Format</label>
+                <select id="m-format" class="input" value="{{ mFormat }}" onChange="{{ onMFormat }}" style="min-height:44px;">
+                  <sc-for list="{{ formatOpts }}" as="o" hint-placeholder-count="4"><option value="{{ o.k }}">{{ o.label }}</option></sc-for>
+                </select>
+              </div>
+              <div class="field">
+                <label for="m-scoring">Scoring at deuce</label>
+                <select id="m-scoring" class="input" value="{{ mScoring }}" onChange="{{ onMScoring }}" style="min-height:44px;">
+                  <sc-for list="{{ scoringOpts }}" as="o" hint-placeholder-count="2"><option value="{{ o.k }}">{{ o.label }}</option></sc-for>
+                </select>
+              </div>
+              <div class="field">
+                <label for="m-outcome">How the match ended</label>
+                <select id="m-outcome" class="input" value="{{ mOutcome }}" onChange="{{ onMOutcome }}" style="min-height:44px;">
+                  <sc-for list="{{ outcomeOpts }}" as="o" hint-placeholder-count="7"><option value="{{ o.k }}">{{ o.label }}</option></sc-for>
+                </select>
+              </div>
+              <div style="font-size:12px;color:var(--color-neutral-700);">{{ adjNote }}</div>
               <div style="display:grid;grid-template-columns:64px 1fr 1fr;gap:10px;align-items:center;">
                 <span></span>
                 <span style="font:700 11px var(--font-heading);letter-spacing:1.5px;text-transform:uppercase;color:var(--color-accent-700);">Side A</span>
@@ -671,7 +690,7 @@ a{color:var(--color-accent-700);text-decoration:none;} a:hover{color:var(--color
         </div>
       </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;provisionalMatches&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:10,&quot;min&quot;:0,&quot;max&quot;:30,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Handicap engine&quot;},&quot;halveDoubles&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Handicap engine&quot;}}">
+<script type="text/x-dc" data-dc-script data-props="{&quot;provisionalMatches&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:0,&quot;min&quot;:0,&quot;max&quot;:20,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Handicap engine&quot;},&quot;roundingMode&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;up&quot;,&quot;options&quot;:[&quot;up&quot;,&quot;nearest&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Handicap engine&quot;},&quot;maxDifference&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:70,&quot;min&quot;:20,&quot;max&quot;:120,&quot;step&quot;:5,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Handicap engine&quot;},&quot;maxAdjustmentPerMatch&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:2,&quot;min&quot;:1,&quot;max&quot;:5,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Handicap engine&quot;},&quot;advantageScoringWeight&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:0.5,&quot;min&quot;:0,&quot;max&quot;:1,&quot;step&quot;:0.1,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Handicap engine&quot;},&quot;agreedStopWeight&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:0.5,&quot;min&quot;:0,&quot;max&quot;:1,&quot;step&quot;:0.1,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Handicap engine&quot;},&quot;minGamesForAdjustment&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:6,&quot;min&quot;:0,&quot;max&quot;:20,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Handicap engine&quot;},&quot;minGamesForDoubleAdjustment&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:12,&quot;min&quot;:0,&quot;max&quot;:30,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Handicap engine&quot;}}">
 class Component extends DCLogic {
   KEY = 'brighton-handicaps-v2';
   SUPA = 'https://uncbwavesacjiieggpbj.supabase.co/rest/v1/club_data';
@@ -724,7 +743,7 @@ class Component extends DCLogic {
   applyImport(rows) {
     const data = this.state.data;
     const norm = s => String(s == null ? '' : s).trim();
-    const clamp = v => Math.round(Math.max(0, Math.min(100, v)) * 10) / 10;
+    const clamp = v => Math.round(Math.max(-20, Math.min(120, v)));
     let start = 0, nameCol = 0, sCol = 1, dCol = 2;
     const head = (rows[0] || []).map(c => norm(c).toLowerCase());
     if (head.some(c => c.includes('name'))) {
@@ -764,9 +783,9 @@ class Component extends DCLogic {
     this.setState({ data: nd, importMsg: 'Imported \u2014 ' + updated + ' updated, ' + added + ' added' + (skipped.length ? '. Skipped (no number): ' + skipped.join(', ') : '') + '.' });
   }
   CODES = [
-    { code: 'S', text: 'One serve only — no second serve' },
-    { code: 'O', text: 'No overheads — a lob must be allowed to bounce before being struck' },
-    { code: 'A', text: 'Alleys — doubles: the stronger pair may not hit into the doubles alleys (balls there are out); singles: the weaker player’s shots into the alleys count as good' },
+    { code: 'S', text: 'One serve \u2014 the stronger side has no second serve; a fault loses the point' },
+    { code: 'O', text: 'No overheads \u2014 the stronger side may not hit an overhead smash' },
+    { code: 'B', text: 'Boundary restriction \u2014 the stronger side\u2019s shots must land inside the singles lines; the weaker side plays to the doubles court' },
   ];
   seed() {
     const P = (id, name, hcp, pm, hist) => ({ id, name, hcp, hcpD: hcp, pm, hist });
@@ -792,56 +811,124 @@ class Component extends DCLogic {
     tab: 'roster', sel: null, addOpen: false, addName: '', addHcp: '',
     mType: 'singles', a1: '', a2: '', b1: '', b2: '', phase: 'setup',
     sets: [[-1, -1], [-1, -1], [-1, -1]], scoreErr: '', result: null,
-    editOpen: false, editVal: '', editErr: '', clearOpen: false, clearHistOpen: false, wipeOpen: false, wipeVal: '', recalcOpen: false, recalcMsg: '', mImportMsg: '', sync: 'syncing', delOpen: false, importMsg: '', delMatch: '', boardBy: 'doubles', startUsed: 'auto',
+    editOpen: false, editVal: '', editErr: '', clearOpen: false, clearHistOpen: false, wipeOpen: false, wipeVal: '', recalcOpen: false, recalcMsg: '', mImportMsg: '', sync: 'syncing', delOpen: false, importMsg: '', delMatch: '', boardBy: 'doubles', startUsed: 'auto', mFormat: 'bo3', mScoring: 'point', mOutcome: 'complete',
   };
-  ptProb(diff) { return Math.min(0.95, 0.5 + diff / 155); }
+  TABLE = [
+    [0, 'Love\u2013love', 'love', 'love', 0, []],
+    [5, 'Love / owe 15', 'love', 'owe 15', 1, []],
+    [10, '15\u2013love', '15', 'love', 0, []],
+    [15, 'Love / owe 30', 'love', 'owe 30', 2, []],
+    [20, '15 / owe 15', '15', 'owe 15', 1, []],
+    [25, 'Love / owe 40', 'love', 'owe 40', 3, []],
+    [30, '15 / owe 30', '15', 'owe 30', 2, []],
+    [35, '30\u2013love', '30', 'love', 0, []],
+    [40, '15 / owe 40', '15', 'owe 40', 3, []],
+    [45, '30 / owe 15', '30', 'owe 15', 1, []],
+    [50, '30 / owe 30', '30', 'owe 30', 2, []],
+    [55, '30 / owe 40', '30', 'owe 40', 3, []],
+    [60, '30 / owe 40', '30', 'owe 40', 3, ['S']],
+    [65, '30 / owe 40', '30', 'owe 40', 3, ['S', 'O']],
+    [70, '30 / owe 40', '30', 'owe 40', 3, ['S', 'O', 'B']],
+  ];
+  MFORMATS = [
+    { k: 'bo3', label: 'Best of 3 sets', b0: 0.33, b1: 0.23 },
+    { k: 'set6', label: 'One set to 6', b0: 0.33, b1: 0.23 },
+    { k: 'pro8', label: '8-game pro set', b0: 0.38, b1: 0.28 },
+    { k: 'pro10', label: '10-game pro set', b0: 0.41, b1: 0.31 },
+  ];
+  SCORINGS = [
+    { k: 'point', label: 'Deciding point at deuce' },
+    { k: 'adv', label: 'Advantage scoring' },
+  ];
+  OUTCOMES = [
+    { k: 'complete', label: 'Played to a finish' },
+    { k: 'time', label: 'Court time expired' },
+    { k: 'retired', label: 'Retirement or injury' },
+    { k: 'weather', label: 'Weather or light' },
+    { k: 'agreed', label: 'Stopped by agreement' },
+    { k: 'walkover', label: 'Walkover, default, no play' },
+    { k: 'practice', label: 'Practice or unrated' },
+  ];
+  FAIRP = { 0: .5, 5: .56, 10: .579, 15: .607, 20: .636, 25: .645, 30: .68, 35: .686, 40: .714, 45: .736, 50: .772, 55: .799, 60: .82, 65: .84, 70: .86 };
+  cfg() {
+    return {
+      rounding: this.props.roundingMode ?? 'up',
+      maxDiff: this.props.maxDifference ?? 70,
+      maxAdj: this.props.maxAdjustmentPerMatch ?? 2,
+      advW: this.props.advantageScoringWeight ?? 0.5,
+      minG: this.props.minGamesForAdjustment ?? 6,
+      minG2: this.props.minGamesForDoubleAdjustment ?? 12,
+      stopW: this.props.agreedStopWeight ?? 0.5,
+      provN: this.props.provisionalMatches ?? 0,
+    };
+  }
+  fmtR(h) { const v = Math.round(h * 10) / 10; return Number.isInteger(v) ? String(v) : v.toFixed(1); }
+  roundDiff(raw) {
+    const c = this.cfg();
+    const d = c.rounding === 'nearest' ? Math.round(raw / 5) * 5 : Math.ceil(raw / 5 - 1e-9) * 5;
+    return Math.max(0, Math.min(c.maxDiff, d));
+  }
+  bandFor(diff) {
+    const d = this.roundDiff(diff);
+    const r = this.TABLE.find(x => x[0] === d) || this.TABLE[this.TABLE.length - 1];
+    return { d, start: r[1], wScore: r[2], sScore: r[3], owe: r[4], restr: r[5] };
+  }
+
   gameProb(p) { const q = 1 - p; return Math.pow(p, 4) * (1 + 4 * q + 10 * q * q) + 20 * Math.pow(p, 3) * Math.pow(q, 3) * p * p / (1 - 2 * p * q); }
-  tbProb(p) { const q = 1 - p, C = [1, 7, 28, 84, 210, 462]; let s = 0; for (let k = 0; k <= 5; k++) s += C[k] * Math.pow(p, 7) * Math.pow(q, k); return s + 924 * Math.pow(p, 6) * Math.pow(q, 6) * p * p / (1 - 2 * p * q); }
-  setProb(p, pg) { const qg = 1 - pg, C = [1, 6, 21, 56, 126]; let s = 0; for (let k = 0; k <= 4; k++) s += C[k] * Math.pow(pg, 6) * Math.pow(qg, k); return s + 252 * Math.pow(pg, 5) * Math.pow(qg, 5) * (pg * pg + 2 * pg * qg * this.tbProb(p)); }
-  chain(diff) { const p = this.ptProb(diff), pg = this.gameProb(p), ps = this.setProb(p, pg); return { p, pg, ps, pm: ps * ps * (3 - 2 * ps) }; }
   levelPredict(diff, strongN) {
-    if (diff <= 2) return 'Dead level — could go either way, likely tie-break sets (7–6 either side).';
-    const c = this.chain(diff);
-    const lg = Math.max(0, Math.min(5, Math.round(6 * (1 - c.pg) / c.pg)));
-    const lg2 = Math.max(0, Math.min(5, Math.round(6 * (1 - c.pg) / c.pg - 0.5)));
-    return 'about 6–' + lg + ', 6–' + lg2 + ' to ' + strongN + ' — ' + (c.pm >= 0.995 ? '>99' : Math.round(c.pm * 100)) + '% to win the match (points ' + Math.round(c.p * 100) + '%, games ' + Math.round(c.pg * 100) + '%).';
+    const d = this.roundDiff(diff);
+    if (d === 0) return 'Level \u2014 no start, and no way to call it.';
+    const pg = this.gameProb(this.FAIRP[d] ?? 0.86);
+    const lg = Math.max(0, Math.min(5, Math.round(6 * (1 - pg) / pg)));
+    const lg2 = Math.max(0, Math.min(5, Math.round(6 * (1 - pg) / pg - 0.5)));
+    return 'about 6\u2013' + lg + ', 6\u2013' + lg2 + ' to ' + strongN + ' if the start were not used (' + Math.round(pg * 100) + '% of games).';
+  }
+  adjSize(share, fmtK, total, complete) {
+    const c = this.cfg();
+    if (complete) {
+      const f = this.MFORMATS.find(x => x.k === fmtK) || this.MFORMATS[0];
+      if (share >= f.b0) return { n: 0, why: 'inside the no-change band' };
+      if (share >= f.b1) return { n: 1, why: '' };
+      return { n: 2, why: '' };
+    }
+    if (total < c.minG) return { n: 0, why: 'under ' + c.minG + ' games' };
+    const row = total <= 7 ? { z: .34, cap: 1 } : total <= 9 ? { z: .36, cap: 1 } : total <= 11 ? { z: .38, cap: 1 } : total <= 15 ? { z: .39, o: .29, cap: 2 } : { z: .41, o: .31, cap: 2 };
+    if (share >= row.z) return { n: 0, why: 'inside the no-change band' };
+    if (row.cap === 1 || total < c.minG2) return { n: 1, why: 'short sample \u2014 capped at 1' };
+    return { n: share < row.o ? 2 : 1, why: '' };
   }
   START_OPTS = [
     { k: 'auto', label: 'As suggested', d: null },
-    { k: 'level', label: 'Level (no start)', d: 0 },
-    { k: 'L15', label: 'Love / owe 15', d: 7 },
-    { k: '15L', label: '15–love', d: 12 },
-    { k: '1515', label: '15 / owe 15', d: 17 },
-    { k: '30L', label: '30–love', d: 22 },
-    { k: '3015', label: '30 / owe 15', d: 30 },
+    { k: 'd0', label: 'Love\u2013love (scratch)', d: 0 },
+    { k: 'd5', label: 'Love / owe 15', d: 5 },
+    { k: 'd10', label: '15\u2013love', d: 10 },
+    { k: 'd15', label: 'Love / owe 30', d: 15 },
+    { k: 'd20', label: '15 / owe 15', d: 20 },
+    { k: 'd25', label: 'Love / owe 40', d: 25 },
+    { k: 'd30', label: '15 / owe 30', d: 30 },
+    { k: 'd35', label: '30\u2013love', d: 35 },
+    { k: 'd40', label: '15 / owe 40', d: 40 },
+    { k: 'd45', label: '30 / owe 15', d: 45 },
+    { k: 'd50', label: '30 / owe 30', d: 50 },
+    { k: 'd55', label: '30 / owe 40', d: 55 },
   ];
   startOpt(k) { return this.START_OPTS.find(o => o.k === k) || this.START_OPTS[0]; }
-  serveLine(start, weakN, strongN) {
-    if (/level/i.test(start)) return 'Every game starts love–love, first serve from the deuce court, courts alternating each point — normal tennis flow.';
-    const owe = /owe 15/.test(start);
-    const base = /^30/.test(start) ? '30' : /^15/.test(start) ? '15' : 'love';
-    const strongScore = owe ? 'owe 15' : 'love';
-    return 'The start belongs to the side, not the server: ' + weakN + ' hold ' + base + ' and ' + strongN + ' hold ' + strongScore + ' at the start of every game, serving or receiving. Call the server’s own score first — so with ' + weakN + ' serving it is “' + base + '–' + strongScore + '”, and with ' + strongN + ' serving it is “' + strongScore + '–' + base + '”.' + (owe ? ' Owe 15 means ' + strongN + ' must win one point just to reach love.' : '') + ' First serve of every game is from the deuce court — as at love–love — then courts alternate each point as normal, whatever the starting score.';
-  }
-  bandFor(diff) {
-    if (diff <= 4) return { start: 'Level', owe: 0, restr: [] };
-    if (diff <= 9) return { start: 'Love / owe 15', owe: 1, restr: [] };
-    if (diff <= 14) return { start: '15–love', owe: 0, restr: [] };
-    if (diff <= 19) return { start: '15 / owe 15', owe: 1, restr: [] };
-    if (diff <= 24) return { start: '30–love', owe: 0, restr: [] };
-    if (diff <= 34) return { start: '30 / owe 15', owe: 1, restr: [] };
-    if (diff <= 44) return { start: '30 / owe 15', owe: 1, restr: ['S'] };
-    if (diff <= 54) return { start: '30 / owe 15', owe: 1, restr: ['S', 'O'] };
-    return { start: '30 / owe 15', owe: 1, restr: ['S', 'O', 'A'] };
+  serveLine(band, weakN, strongN, wPl, sPl) {
+    const wHold = wPl ? ' hold ' : ' holds ';
+    const sHold = sPl ? ' hold ' : ' holds ';
+    const deuce = ' Game ball at deuce: a single deciding point is played, and the receiving side chooses the return court.';
+    const w = band.wScore || 'love', s = band.sScore || 'love';
+    if (w === 'love' && s === 'love') return 'Every game starts love\u2013love, first serve from the deuce court, courts alternating each point \u2014 normal tennis flow.' + deuce;
+    return 'The start belongs to the side, not the server: ' + weakN + wHold + w + ' and ' + strongN + sHold + s + ' at the start of every game, serving or receiving. Call the server\u2019s own score first \u2014 so with ' + weakN + ' serving it is \u201c' + w + '\u2013' + s + '\u201d, and with ' + strongN + ' serving it is \u201c' + s + '\u2013' + w + '\u201d. First serve of every game is from the deuce court, then courts alternate each point as normal.' + deuce;
   }
   restrFor(codes) { return this.CODES.filter(c => codes.includes(c.code)); }
   band(h) {
-    if (h <= 5) return 'County'; if (h <= 15) return 'First team'; if (h <= 29) return 'Strong club';
-    if (h <= 44) return 'Solid club'; if (h <= 58) return 'Social'; if (h <= 71) return 'Improver'; if (h <= 84) return 'Beginner'; return 'New';
+    if (h < 0) return 'Open'; if (h <= 10) return 'County'; if (h <= 30) return 'First team'; if (h <= 50) return 'Club standard';
+    if (h <= 70) return 'Social'; if (h <= 90) return 'Improver'; return 'Beginner';
   }
   ntrp(h) {
-    if (h <= 5) return '5.5+'; if (h <= 15) return '5.0'; if (h <= 29) return '4.5';
-    if (h <= 44) return '4.0'; if (h <= 58) return '3.5'; if (h <= 71) return '3.0'; if (h <= 84) return '2.5'; return '1.0\u20132.0';
+    if (h < -10) return '6.0+'; if (h < 0) return '5.5'; if (h <= 10) return '5.0'; if (h <= 30) return '4.5';
+    if (h <= 50) return '4.0'; if (h <= 70) return '3.5'; if (h <= 90) return '3.0'; return '2.5';
   }
   pById(id) { return this.state.data.players.find(p => p.id === id); }
   names(ids) { return ids.map(id => { const p = this.pById(id); return p ? p.name : '?'; }).join(' / '); }
@@ -897,30 +984,24 @@ class Component extends DCLogic {
     const nd = { ...data, matches: [...data.matches, ...out].sort((x, y) => x.d < y.d ? -1 : x.d > y.d ? 1 : 0) };
     this.setState({ data: nd, mImportMsg: 'Imported ' + out.length + ' match' + (out.length === 1 ? '' : 'es') + (skipped.length ? '. Skipped ' + skipped.join('; ') + '.' : '.') + ' Handicaps rebuilt from the full log.' }, () => this.recalcAll());
   }
-  recalcAll() {
-    const data = this.state.data;
-    const provN = this.props.provisionalMatches ?? 10;
-    const halve = this.props.halveDoubles ?? true;
-    const cur = {}, hist = {}, cnt = {};
+  applyLog(data) {
+    const c = this.cfg();
+    const cur = {}, hist = {}, cnt = {}, confirm = {}, mvFix = {};
     data.players.forEach(p => {
       const seed = p.hist && p.hist.length ? p.hist[0].after : p.hcp;
       cur[p.id] = { singles: seed, doubles: seed };
       hist[p.id] = p.hist && p.hist.length ? [p.hist[0]] : [];
       cnt[p.id] = { singles: 0, doubles: 0, pm: p.pm || 0 };
     });
-    const mvFix = {};
     const events = [];
-    data.players.forEach(p => (p.hist || []).slice(1).forEach(h => {
-      if (!/^\[/.test(h.label || '')) events.push({ d: h.d, k: 0, pid: p.id, h });
-    }));
+    data.players.forEach(p => (p.hist || []).slice(1).forEach(h => { if (!/^\[/.test(h.label || '')) events.push({ d: h.d, k: 0, pid: p.id, h }); }));
     data.matches.forEach(m => events.push({ d: m.d, k: 1, m }));
     events.sort((x, y) => x.d < y.d ? -1 : x.d > y.d ? 1 : x.k - y.k);
-    const avg = (ids, type) => Math.round(ids.reduce((s, id) => s + (cur[id] ? cur[id][type] : 0), 0) / ids.length * 10) / 10;
+    const avg = (ids, type) => ids.reduce((s, id) => s + (cur[id] ? cur[id][type] : 0), 0) / ids.length;
     events.forEach(ev => {
       if (ev.k === 0) {
-        const c = cur[ev.pid]; if (!c) return;
-        const isD = /doubles/i.test(ev.h.label || '');
-        c[isD ? 'doubles' : 'singles'] = ev.h.after;
+        const c0 = cur[ev.pid]; if (!c0) return;
+        c0[/doubles/i.test(ev.h.label || '') ? 'doubles' : 'singles'] = ev.h.after;
         hist[ev.pid].push(ev.h);
         return;
       }
@@ -929,43 +1010,54 @@ class Component extends DCLogic {
       if (!A.length || !B.length) return;
       let ga = 0, gb = 0;
       (m.sets || []).forEach(([a, b]) => { ga += a; gb += b; });
-      const win = m.win;
-      const gw = win === 'a' ? ga : gb, gl = win === 'a' ? gb : ga;
-      let base = gw >= 2 * gl ? 1.5 : 0.5, note = gw >= 2 * gl ? 'big' : '', weakIdsR = null;
-      const usedR = this.startOpt(m.startUsed || (/Level/.test(m.start || '') ? 'level' : 'auto'));
-      if (usedR.d !== null) {
-        const hA = avg(A, type), hB = avg(B, type);
-        const diffL = Math.max(0, Math.round((Math.abs(hA - hB) - usedR.d) * 10) / 10);
-        const weakSide = hA >= hB ? 'a' : 'b';
-        const weakArrR = weakSide === 'a' ? A : B;
-        const setsN = (m.sets || []).length || 1;
-        const actWeak = (weakSide === 'a' ? ga : gb) / setsN;
-        const cg = this.gameProb(this.ptProb(diffL));
-        const expWeak = Math.min(5, 6 * (1 - cg) / cg);
-        const whereR = usedR.k === 'level' ? 'at level' : 'from ' + usedR.label;
-        if (diffL <= 4) note = 'played ' + whereR;
-        else if (win === weakSide) { base = 1.5; note = 'upset ' + whereR; weakIdsR = weakArrR; }
-        else if (actWeak > expWeak + 0.5) { base = 0.5; note = 'better than rated ' + whereR; weakIdsR = weakArrR; }
-        else { base = 0; note = 'expected result ' + whereR + ' — no change'; }
-      }
+      const total = ga + gb;
+      const win = ga === gb ? m.win : (ga > gb ? 'a' : 'b');
       const winIds = win === 'a' ? A : B, loseIds = win === 'a' ? B : A;
-      const scoreStr = (m.sets || []).map(([a, b]) => (win === 'a' ? a + '\u2013' + b : b + '\u2013' + a)).join(', ');
+      const share = total ? (win === 'a' ? gb : ga) / total : 0;
+      const hA = avg(A, type), hB = avg(B, type);
+      const rawDiff = Math.abs(hA - hB);
+      const outcome = m.outcome || 'complete';
+      const complete = outcome === 'complete';
+      const reasons = [];
+      let n = 0, weight = 1;
+      if (outcome === 'walkover' || outcome === 'practice') reasons.push(outcome === 'walkover' ? 'walkover \u2014 no adjustment' : 'unrated \u2014 no adjustment');
+      else if (rawDiff > c.maxDiff) reasons.push('difference above ' + c.maxDiff + ' \u2014 no adjustment');
+      else if (ga === gb) reasons.push('equal games \u2014 no adjustment');
+      else {
+        const r = this.adjSize(share, m.format || 'bo3', total, complete);
+        n = Math.min(r.n, c.maxAdj);
+        if (r.why) reasons.push(r.why);
+        if (!complete) reasons.push((this.OUTCOMES.find(o => o.k === outcome) || {}).label ? (this.OUTCOMES.find(o => o.k === outcome).label.toLowerCase()) : outcome);
+        if (m.scoring === 'adv') { weight *= c.advW; reasons.push('advantage scoring \u00d7' + c.advW); }
+        if (outcome === 'agreed') { weight *= c.stopW; reasons.push('agreed stop \u00d7' + c.stopW); }
+      }
+      reasons.unshift('loser took ' + Math.round(share * 100) + '% of ' + total + ' games');
+      let held = false;
+      if (n > 0 && A.length === 1 && B.length === 1) {
+        const strongUp = (hA < hB ? 'a' : 'b') !== win;
+        const step = n * weight;
+        const nextDiff = Math.abs((hA + (winIds.includes(A[0]) ? -step : step)) - (hB + (winIds.includes(B[0]) ? -step : step)));
+        if (Math.abs(rawDiff - 5) < 1e-9 && nextDiff < 1e-9) {
+          const key = type + ':' + [...A, ...B].sort().join('|');
+          if (!confirm[key]) { confirm[key] = 1; held = true; reasons.push('held \u2014 scratch needs a second confirming result'); }
+          else { confirm[key] = 0; reasons.push('scratch confirmed'); }
+        }
+      }
       const mvW = [], mvL = [];
+      const scoreStr = (m.sets || []).map(([a, b]) => (win === 'a' ? a + '\u2013' + b : b + '\u2013' + a)).join(', ');
       [...winIds, ...loseIds].forEach(id => {
-        const w = winIds.includes(id), p = this.pById(id);
-        const prov = p && p.prov === false ? false : p && p.prov === true ? true : (cnt[id].pm + cnt[id][type]) < provN;
-        let mag = Math.round(base * (dbl && halve ? 0.5 : 1) * (prov ? 2 : 1) * 10) / 10;
-        const downR = weakIdsR ? weakIdsR.includes(id) : w;
-        const delta = mag === 0 ? 0 : (downR ? -mag : mag);
+        const w = winIds.includes(id), p = data.players.find(x => x.id === id);
+        const prov = c.provN > 0 && (p && p.prov === false ? false : p && p.prov === true ? true : (cnt[id].pm + cnt[id][type]) < c.provN);
+        let mag = held ? 0 : n * weight * (prov ? 2 : 1);
+        mag = Math.round(mag * 10) / 10;
+        const delta = mag === 0 ? 0 : (w ? -mag : mag);
         const before = cur[id][type];
-        const after = Math.round(Math.max(0, Math.min(100, before + delta)) * 10) / 10;
+        const after = Math.round((before + delta) * 10) / 10;
         cur[id][type] = after;
-        const notes = [];
-        if (note && note !== 'big') notes.push(note); else if (note === 'big') notes.push(w ? 'big win' : 'big loss');
-        if (dbl && halve) notes.push('doubles \u00d7\u00bd');
-        if (prov) notes.push('provisional \u00d72');
-        if (delta !== 0) (w ? mvW : mvL).push((delta < 0 ? '\u2212' : '+') + Math.abs(delta).toFixed(1));
-        hist[id].push({ d: m.d, label: '[' + type + '] ' + (w ? 'def. ' : 'lost to ') + this.names(w ? loseIds : winIds) + ' ' + scoreStr + ' (' + notes.join(', ') + ')', delta, after });
+        const notes = [...reasons];
+        if (prov && !held) notes.push('provisional \u00d72');
+        hist[id].push({ d: m.d, label: '[' + type + '] ' + (w ? 'def. ' : 'lost to ') + this.names(w ? loseIds : winIds) + ' ' + scoreStr + (m.event ? ' \u00b7 ' + m.event : '') + ' (' + notes.join(', ') + ')', delta, after });
+        if (delta !== 0) (w ? mvW : mvL).push((delta < 0 ? '\u2212' : '+') + Math.abs(delta));
       });
       const uq = arr => [...new Set(arr)].join('/');
       mvFix[m.id] = (mvW.length || mvL.length) ? (uq(mvW) + ' / ' + uq(mvL)) : 'no change';
@@ -973,20 +1065,23 @@ class Component extends DCLogic {
     });
     const players = data.players.map(p => cur[p.id] ? { ...p, hcp: cur[p.id].singles, hcpD: cur[p.id].doubles, hist: hist[p.id] } : p);
     const matches = data.matches.map(m => mvFix[m.id] ? { ...m, mv: mvFix[m.id] } : m);
-    const nd = { ...data, players, matches };
+    return { ...data, players, matches };
+  }
+  recalcAll() {
+    const nd = this.applyLog(this.state.data);
     this.persist(nd);
-    this.setState({ data: nd, recalcOpen: false, recalcMsg: 'Rebuilt ' + players.length + ' player records from ' + data.matches.length + ' matches.' });
+    this.setState({ data: nd, recalcOpen: false, recalcMsg: 'Rebuilt ' + nd.players.length + ' player records from ' + nd.matches.length + ' matches.' });
   }
   recCount(pid, type) { return this.state.data.matches.filter(m => (m.a.includes(pid) || m.b.includes(pid)) && (!type || m.type === type)).length; }
-  isProv(p, type) { if (p.prov === false) return false; if (p.prov === true) return true; return (p.pm || 0) + this.recCount(p.id, type) < (this.props.provisionalMatches ?? 10); }
+  isProv(p, type) { const n = this.cfg().provN; if (!n) return false; if (p.prov === false) return false; if (p.prov === true) return true; return (p.pm || 0) + this.recCount(p.id, type) < n; }
   sideHcp(ids, dbl) { const hs = ids.map(id => { const p = this.pById(id); return dbl ? p.hcpD : p.hcp; }); return Math.round(hs.reduce((a, b) => a + b, 0) / hs.length * 10) / 10; }
   rec(pid) { let w = 0, l = 0; this.state.data.matches.forEach(m => { const inA = m.a.includes(pid), inB = m.b.includes(pid); if (!inA && !inB) return; ((m.win === 'a') === inA) ? w++ : l++; }); return w + '\u2013' + l; }
   persist(data) { try { localStorage.setItem(this.KEY, JSON.stringify(data)); } catch (e) { } this.cloudPush(data); }
   renderVals() {
     const st = this.state, data = st.data;
     const set = o => this.setState(o);
-    const fmt = h => h.toFixed(1);
-    const provN = this.props.provisionalMatches ?? 10;
+    const fmt = h => this.fmtR(h);
+    const provN = this.cfg().provN;
     const players = [...data.players].sort((x, y) => x.name.localeCompare(y.name));
     const playersView = players.map(p => ({
       name: p.name, hcp: fmt(p.hcpD),
@@ -1014,33 +1109,28 @@ class Component extends DCLogic {
     if (dup) setupErr = 'Each player can only appear once in the match.';
     else if (chosen.length === need.length) {
       const A = dbl ? [st.a1, st.a2] : [st.a1], B = dbl ? [st.b1, st.b2] : [st.b1];
-      const ha = this.sideHcp(A, dbl), hb = this.sideHcp(B, dbl), diffTrue = Math.round(Math.abs(ha - hb) * 10) / 10, diff = Math.round(diffTrue);
+      const ha = this.sideHcp(A, dbl), hb = this.sideHcp(B, dbl), rawDiff = Math.round(Math.abs(ha - hb) * 10) / 10;
       const weak = ha >= hb ? A : B, strong = ha >= hb ? B : A;
       const weakN = this.names(weak), strongN = this.names(strong);
-      if (diff >= 65) {
-        odds = {
-          playable: false, start: 'Coaching formats', recv: 'Difference ' + diff + ' is 65 or over — use coaching formats or a committee-designed handicap.',
-          note: '', restr: [], tie: 'Record nothing for handicap.',
-          diffLine: 'Difference ' + diffTrue + (dbl ? ' — pair averages ' + ha.toFixed(1) + ' vs ' + hb.toFixed(1) : ''), codesShort: '',
-          level: this.levelPredict(diff, strongN),
-          serve: 'Coaching formats — no handicap start applies.',
-        };
-      } else {
-        const bandRow = this.bandFor(diff);
-        const restr = this.restrFor(bandRow.restr);
-        const tn = Math.min(3, Math.floor(diff / 15));
-        odds = {
-          playable: true, start: bandRow.start,
-          recv: diff <= 4 ? 'Sides are close — play level.' : weakN + (weak.length > 1 ? ' start' : ' starts') + ' every game ahead (weaker score first).',
-          note: bandRow.owe ? 'Owe 15: ' + strongN + ' must win one point to reach love.' : '',
-          restr, tie: 'Tie-break at 6–6: ' + (tn === 0 ? 'level start (restrictions still apply; owe scores do not).' : weakN + (weak.length > 1 ? ' lead ' : ' leads ') + tn + '–0 (restrictions still apply; owe scores do not).'),
-          diffLine: 'Difference ' + diffTrue + (dbl ? ' — pair averages ' + ha.toFixed(1) + ' vs ' + hb.toFixed(1) : ''),
-          codesShort: restr.length ? ' · ' + restr.map(c => c.code).join(' ') : '',
-          startLabel: bandRow.start, r: diff,
-          level: this.levelPredict(diff, strongN),
-          serve: this.serveLine(bandRow.start, weakN, strongN),
-        };
-      }
+      const bandRow = this.bandFor(rawDiff);
+      const restr = this.restrFor(bandRow.restr);
+      const over = rawDiff > this.cfg().maxDiff;
+      const oweN = bandRow.owe;
+      const oweLine = oweN ? 'Owe ' + (oweN === 3 ? '40' : oweN === 2 ? '30' : '15') + ': ' + strongN + ' must win ' + (oweN === 3 ? 'three points' : oweN === 2 ? 'two points' : 'one point') + ' before reaching love.' : '';
+      odds = {
+        playable: !over, start: over ? 'By agreement' : bandRow.start,
+        recv: over
+          ? 'Difference ' + this.fmtR(rawDiff) + ' is beyond the table ceiling of ' + this.cfg().maxDiff + ' — arrange this one by agreement. It will be recorded but will not move either rating.'
+          : bandRow.d === 0 ? 'Ratings are level — play at scratch, love–love.' : weakN + (weak.length > 1 ? ' start' : ' starts') + ' every game at ' + bandRow.wScore + ', ' + strongN + ' at ' + bandRow.sScore + '.',
+        note: over ? '' : oweLine,
+        restr: over ? [] : restr,
+        tie: over ? '' : 'A tie-break counts as one game when ratings are adjusted; a match tie-break in place of a final set likewise counts as one game.',
+        diffLine: 'Difference ' + this.fmtR(rawDiff) + ' — rounded ' + (this.cfg().rounding === 'up' ? 'up' : 'to the nearest 5') + ' to ' + bandRow.d + (dbl ? ' · team ratings ' + this.fmtR(ha) + ' and ' + this.fmtR(hb) : ''),
+        codesShort: restr.length && !over ? ' · ' + restr.map(c => c.code).join(' ') : '',
+        startLabel: bandRow.start, r: bandRow.d,
+        level: this.levelPredict(rawDiff, strongN),
+        serve: over ? '' : this.serveLine(bandRow, weakN, strongN, weak.length > 1, strong.length > 1) + (dbl && restr.length ? ' In doubles the restrictions apply to both players on the stronger team.' : ''),
+      };
     }
     const opts = players.map(p => ({ id: p.id, label: p.name + ' · ' + fmt(dbl ? p.hcpD : p.hcp) }));
     const sel = k => e => set({ [k]: e.target.value });
@@ -1057,72 +1147,48 @@ class Component extends DCLogic {
       if (!played.length || sa === sb) { set({ scoreErr: 'Enter a decisive score — one side must take more sets. Tied or empty sets are ignored.' }); return; }
       const A = dbl ? [cur.a1, cur.a2] : [cur.a1], B = dbl ? [cur.b1, cur.b2] : [cur.b1];
       const win = sa > sb ? 'a' : 'b';
-      const gw = win === 'a' ? ga : gb, gl = win === 'a' ? gb : ga;
-      const big = gw >= 2 * gl;
-      let base = big ? 1.5 : 0.5, levelNote = '', weakIds = null;
-      const usedOpt = this.startOpt(cur.startUsed);
-      if (usedOpt.d !== null) {
-        const hA2 = this.sideHcp(A, dbl), hB2 = this.sideHcp(B, dbl);
-        const trueDiff = Math.round(Math.abs(hA2 - hB2) * 10) / 10;
-        const diffL = Math.max(0, Math.round((trueDiff - usedOpt.d) * 10) / 10);
-        const weakSide = hA2 >= hB2 ? 'a' : 'b';
-        const weakArr = weakSide === 'a' ? A : B;
-        const setsN = played.length, actWeak = (weakSide === 'a' ? ga : gb) / setsN;
-        const cg = this.gameProb(this.ptProb(diffL)); const expWeak = Math.min(5, 6 * (1 - cg) / cg);
-        const where = usedOpt.k === 'level' ? 'at level' : 'from ' + usedOpt.label;
-        if (diffL <= 4) levelNote = 'played ' + where;
-        else if (win === weakSide) { base = 1.5; levelNote = 'upset ' + where; weakIds = weakArr; }
-        else if (actWeak > expWeak + 0.5) { base = 0.5; levelNote = 'better than rated ' + where; weakIds = weakArr; }
-        else { base = 0; levelNote = 'expected result ' + where + ' — no change'; }
-      }
       const winIds = win === 'a' ? A : B, loseIds = win === 'a' ? B : A;
       const scoreStr = played.map(([a, b]) => (win === 'a' ? a + '\u2013' + b : b + '\u2013' + a)).join(', ');
       const today = new Date().toISOString().slice(0, 10);
-      const adj = [];
-      const halve = this.props.halveDoubles ?? true;
-      const playersNew = data.players.map(p => {
-        const w = winIds.includes(p.id), l = loseIds.includes(p.id);
-        if (!w && !l) return p;
-        const prov = this.isProv(p, cur.mType);
-        let mag = base * (dbl && halve ? 0.5 : 1) * (prov ? 2 : 1);
-        mag = Math.round(mag * 10) / 10;
-        const down = weakIds ? weakIds.includes(p.id) : w;
-        const delta = mag === 0 ? 0 : (down ? -mag : mag);
-        const cur0 = dbl ? p.hcpD : p.hcp;
-        const after = Math.round(Math.max(0, Math.min(100, cur0 + delta)) * 10) / 10;
-        const notes = [];
-        if (levelNote) notes.push(levelNote); else if (big) notes.push(w ? 'big win' : 'big loss');
-        if (dbl && halve) notes.push('doubles \u00d7\u00bd');
-        if (prov) notes.push('provisional \u00d72');
-        adj.push({
-          name: p.name, note: notes.length ? '(' + notes.join(', ') + ')' : '',
-          from: cur0.toFixed(1), to: after.toFixed(1),
-          delta: (delta === 0 ? '' : delta < 0 ? '\u2212' : '+') + Math.abs(delta).toFixed(1),
-          color: delta < 0 ? 'var(--color-accent-700)' : 'var(--color-neutral-800)',
-        });
-        const label = (dbl ? '[doubles] ' : '[singles] ') + (w ? 'def. ' : 'lost to ') + this.names(w ? loseIds : winIds) + ' ' + scoreStr + (notes.length ? ' (' + notes.join(', ') + ')' : '');
-        return { ...p, [dbl ? 'hcpD' : 'hcp']: after, hist: [...p.hist, { d: today, label, delta, after }] };
-      });
-      const startLabel = usedOpt.d !== null ? usedOpt.label + ' (as played)' : (odds && odds.playable ? odds.start + (odds.codesShort || '') : 'Level');
-      const uniq = arr => [...new Set(arr)].join('/');
-      const wAdj = uniq(adj.filter(x => x.delta.startsWith('\u2212')).map(x => x.delta));
-      const lAdj = uniq(adj.filter(x => x.delta.startsWith('+')).map(x => x.delta));
-      const match = { id: 'm' + Date.now(), d: today, type: cur.mType, a: A, b: B, sets: played, start: startLabel, startUsed: cur.startUsed, win, mv: (wAdj || lAdj) ? (wAdj + ' / ' + lAdj) : 'no change' };
-      const nd = { players: playersNew, matches: [...data.matches, match] };
+      const usedOpt = this.startOpt(cur.startUsed);
+      const startLabel = usedOpt.d !== null ? usedOpt.label + ' (as played)' : (odds ? odds.start + (odds.codesShort || '') : 'Level');
+      const match = {
+        id: 'm' + Date.now(), d: today, type: cur.mType, a: A, b: B, sets: played, win,
+        start: startLabel, startUsed: cur.startUsed,
+        format: cur.mFormat, scoring: cur.mScoring, outcome: cur.mOutcome, mv: '',
+      };
+      const key = dbl ? 'hcpD' : 'hcp';
+      const before = {};
+      data.players.forEach(p => before[p.id] = p[key]);
+      const nd = this.applyLog({ ...data, matches: [...data.matches, match] });
+      const saved = nd.matches.find(x => x.id === match.id) || match;
+      const adj = [...winIds, ...loseIds].map(id => {
+        const p = nd.players.find(x => x.id === id);
+        if (!p) return null;
+        const after = p[key], d0 = Math.round((after - before[id]) * 10) / 10;
+        const last = (p.hist || [])[p.hist.length - 1] || {};
+        const mm = /\(([^)]*)\)\s*$/.exec(last.label || '');
+        return {
+          name: p.name, note: mm ? '(' + mm[1] + ')' : '',
+          from: this.fmtR(before[id]), to: this.fmtR(after),
+          delta: d0 === 0 ? '\u2014' : (d0 < 0 ? '\u2212' : '+') + this.fmtR(Math.abs(d0)),
+          color: d0 < 0 ? 'var(--color-accent-700)' : 'var(--color-neutral-800)',
+        };
+      }).filter(Boolean);
       this.persist(nd);
       set({
         data: nd, phase: 'result', scoreErr: '',
         result: {
           winner: this.names(winIds), loser: this.names(loseIds), score: scoreStr, adj,
-          meta: (dbl ? 'Doubles' : 'Singles') + ' · games started ' + startLabel + (usedOpt.d !== null ? ' · ' + (levelNote || 'as played') : big ? ' · big win (at least twice the games)' : ''),
+          meta: (dbl ? 'Doubles' : 'Singles') + ' \u00b7 games started ' + startLabel + ' \u00b7 ' + saved.mv,
         },
       });
     };
-    const resetMatch = () => set({ phase: 'setup', a1: '', a2: '', b1: '', b2: '', mType: 'singles', startUsed: 'auto', sets: [[-1, -1], [-1, -1], [-1, -1]], scoreErr: '', result: null });
+    const resetMatch = () => set({ phase: 'setup', a1: '', a2: '', b1: '', b2: '', mType: 'singles', startUsed: 'auto', mFormat: 'bo3', mScoring: 'point', mOutcome: 'complete', sets: [[-1, -1], [-1, -1], [-1, -1]], scoreErr: '', result: null });
     const addPlayer = () => {
       const name = this.state.addName.trim(), h = parseFloat(this.state.addHcp);
       if (!name || isNaN(h)) return;
-      const hv = Math.round(Math.max(0, Math.min(100, h)) * 10) / 10;
+      const hv = Math.round(Math.max(-20, Math.min(120, h)));
       const today = new Date().toISOString().slice(0, 10);
       const nd = { ...data, players: [...data.players, { id: 'p' + Date.now(), name, hcp: hv, hcpD: hv, pm: 0, hist: [{ d: today, label: 'Initial assessment — ' + this.band(hv).toLowerCase() + ' standard, provisional', delta: 0, after: hv }] }] };
       this.persist(nd);
@@ -1150,10 +1216,7 @@ class Component extends DCLogic {
       big: fmt(bd ? p.hcp : p.hcpD), small: (bd ? 'D ' : 'S ') + fmt(bd ? p.hcpD : p.hcp),
       bg: i === 0 ? 'var(--color-accent-100)' : 'transparent',
     }));
-    const rubric = [[0, 4], [5, 9], [10, 14], [15, 19], [20, 24], [25, 34], [35, 44], [45, 54], [55, 64]].map(([lo, hi]) => {
-      const b = this.bandFor(lo);
-      return { diff: lo + '–' + hi, start: b.start, restr: b.restr.join(' ') || '—' };
-    });
+    const rubric = this.TABLE.map(r => ({ diff: String(r[0]), start: r[1], restr: r[5].join(' ') || '—' }));
     const tabC = t => st.tab === t ? 'var(--color-accent)' : 'var(--color-neutral-700)';
     return {
       provN, playerCount: data.players.length, playersView,
@@ -1273,14 +1336,30 @@ class Component extends DCLogic {
       segDcol: st.boardBy === 'singles' ? 'var(--color-text)' : 'var(--color-bg)',
       byS: () => set({ boardBy: 'singles' }), byD: () => set({ boardBy: 'doubles' }),
       startOpts: this.START_OPTS, startUsed: st.startUsed,
+      formatOpts: this.MFORMATS, scoringOpts: this.SCORINGS, outcomeOpts: this.OUTCOMES,
+      mFormat: st.mFormat, onMFormat: e => set({ mFormat: e.target.value }),
+      mScoring: st.mScoring, onMScoring: e => set({ mScoring: e.target.value }),
+      mOutcome: st.mOutcome, onMOutcome: e => set({ mOutcome: e.target.value }),
+      adjNote: (() => {
+        const c = this.cfg();
+        if (st.mOutcome === 'walkover' || st.mOutcome === 'practice') return 'Recorded only — this will not move either rating.';
+        const f = (this.MFORMATS.find(x => x.k === st.mFormat) || this.MFORMATS[0]);
+        const base = st.mOutcome === 'complete'
+          ? 'Ratings move on the loser’s share of the games: no change at ' + Math.round(f.b0 * 100) + '% or above, ±1 down to ' + Math.round(f.b1 * 100) + '%, ±2 below that.'
+          : 'Unfinished — judged on games played, with the shorter-sample thresholds; under ' + c.minG + ' games nothing moves and ±2 needs at least ' + c.minG2 + '.';
+        const extra = [];
+        if (st.mScoring === 'adv') extra.push('advantage scoring weighted at ' + Math.round(c.advW * 100) + '%');
+        if (st.mOutcome === 'agreed') extra.push('agreed stop weighted at ' + Math.round(c.stopW * 100) + '%');
+        return base + (extra.length ? ' ' + extra.join('; ') + '.' : '');
+      })(),
       onStartUsed: e => set({ startUsed: e.target.value }),
       startAltShow: st.startUsed !== 'auto',
       startAltNote: (() => {
         if (st.startUsed === 'auto') return '';
         const used = this.startOpt(st.startUsed);
-        const res = Math.max(0, Math.round(((odds && odds.r != null ? odds.r : 0) - used.d) * 10) / 10);
-        if (res <= 4) return 'Recorded as played from ' + used.label + '. That is close to the suggested start, so the usual adjustment applies.';
-        return 'Recorded as played from ' + used.label + ' — ' + res + ' of difference left uncovered. The result is judged against what that gap predicts: an upset moves the weaker side down 1.5 and the stronger up 1.5, a better-than-rated loss moves them 0.5, an expected result changes nothing.';
+        const sug = odds && odds.r != null ? odds.r : 0;
+        const same = used.d === sug;
+        return 'Recorded as played from ' + used.label + (same ? ' \u2014 the same as the suggested row.' : ' rather than the suggested ' + sug + ' row.') + ' Ratings move on the loser\u2019s share of games either way, so an unusual start shows up in the score itself.';
       })(),
       clearOpen: st.clearOpen, clearClosed: !st.clearOpen,
       openClear: () => set({ clearOpen: true }),
