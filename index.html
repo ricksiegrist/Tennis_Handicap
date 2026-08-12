@@ -530,6 +530,14 @@ a{color:var(--color-accent-700);text-decoration:none;} a:hover{color:var(--color
                   <sc-for list="{{ outcomeOpts }}" as="o" hint-placeholder-count="7"><option value="{{ o.k }}">{{ o.label }}</option></sc-for>
                 </select>
               </div>
+              <sc-if value="{{ deciderShow }}" hint-placeholder-val="{{ true }}">
+                <div class="field">
+                  <label for="m-decider">Deciding set</label>
+                  <select id="m-decider" class="input" value="{{ decider }}" onChange="{{ onDecider }}" style="min-height:44px;">
+                    <sc-for list="{{ deciderOpts }}" as="o" hint-placeholder-count="3"><option value="{{ o.k }}">{{ o.label }}</option></sc-for>
+                  </select>
+                </div>
+              </sc-if>
               <div style="font-size:12px;color:var(--color-neutral-700);">{{ adjNote }}</div>
               <div style="display:grid;grid-template-columns:64px 1fr 1fr;gap:10px;align-items:center;">
                 <span></span>
@@ -541,11 +549,11 @@ a{color:var(--color-accent-700);text-decoration:none;} a:hover{color:var(--color
                   <span style="font:700 12px var(--font-heading);letter-spacing:1px;">{{ s.label }}</span>
                   <select class="input" value="{{ s.aVal }}" onChange="{{ s.onA }}" style="min-height:44px;">
                     <option value="-1">–</option>
-                    <sc-for list="{{ gameNums }}" as="g"><option value="{{ g }}">{{ g }}</option></sc-for>
+                    <sc-for list="{{ s.nums }}" as="g"><option value="{{ g }}">{{ g }}</option></sc-for>
                   </select>
                   <select class="input" value="{{ s.bVal }}" onChange="{{ s.onB }}" style="min-height:44px;">
                     <option value="-1">–</option>
-                    <sc-for list="{{ gameNums }}" as="g"><option value="{{ g }}">{{ g }}</option></sc-for>
+                    <sc-for list="{{ s.nums }}" as="g"><option value="{{ g }}">{{ g }}</option></sc-for>
                   </select>
                 </div>
               </sc-for>
@@ -811,7 +819,7 @@ class Component extends DCLogic {
     tab: 'roster', sel: null, addOpen: false, addName: '', addHcp: '',
     mType: 'singles', a1: '', a2: '', b1: '', b2: '', phase: 'setup',
     sets: [[-1, -1], [-1, -1], [-1, -1]], scoreErr: '', result: null,
-    editOpen: false, editVal: '', editErr: '', clearOpen: false, clearHistOpen: false, wipeOpen: false, wipeVal: '', recalcOpen: false, recalcMsg: '', mImportMsg: '', sync: 'syncing', delOpen: false, importMsg: '', delMatch: '', boardBy: 'doubles', startUsed: 'auto', mFormat: 'bo3', mScoring: 'point', mOutcome: 'complete',
+    editOpen: false, editVal: '', editErr: '', clearOpen: false, clearHistOpen: false, wipeOpen: false, wipeVal: '', recalcOpen: false, recalcMsg: '', mImportMsg: '', sync: 'syncing', decider: 'set', delOpen: false, importMsg: '', delMatch: '', boardBy: 'doubles', startUsed: 'auto', mFormat: 'bo3', mScoring: 'point', mOutcome: 'complete',
   };
   TABLE = [
     [0, 'Love\u2013love', 'love', 'love', 0, []],
@@ -1044,7 +1052,12 @@ class Component extends DCLogic {
         }
       }
       const mvW = [], mvL = [];
-      const scoreStr = (m.sets || []).map(([a, b]) => (win === 'a' ? a + '\u2013' + b : b + '\u2013' + a)).join(', ');
+      const scoreStr = (m.sets || []).map(([a, b], k) => {
+        const tbk = m.tb && k === m.sets.length - 1;
+        const src = tbk ? m.tb : [a, b];
+        const s0 = win === 'a' ? src[0] + '\u2013' + src[1] : src[1] + '\u2013' + src[0];
+        return tbk ? '[' + s0 + ']' : s0;
+      }).join(', ');
       [...winIds, ...loseIds].forEach(id => {
         const w = winIds.includes(id), p = data.players.find(x => x.id === id);
         const prov = c.provN > 0 && (p && p.prov === false ? false : p && p.prov === true ? true : (cnt[id].pm + cnt[id][type]) < c.provN);
@@ -1134,28 +1147,41 @@ class Component extends DCLogic {
     }
     const opts = players.map(p => ({ id: p.id, label: p.name + ' · ' + fmt(dbl ? p.hcpD : p.hcp) }));
     const sel = k => e => set({ [k]: e.target.value });
+    const gameNums = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+    const tbN = st.decider === 'tb10' ? 10 : 7;
+    const tbNums = Array.from({ length: 26 }, (_, k) => k);
     const setsView = st.sets.map((s, i) => ({
-      label: 'SET ' + (i + 1), aVal: String(s[0]), bVal: String(s[1]),
+      label: (i === 2 && st.decider !== 'set') ? 'TB to ' + tbN : 'SET ' + (i + 1),
+      nums: (i === 2 && st.decider !== 'set') ? tbNums : gameNums,
+      aVal: String(s[0]), bVal: String(s[1]),
       onA: e => set({ sets: this.state.sets.map((x, j) => j === i ? [+e.target.value, x[1]] : x) }),
       onB: e => set({ sets: this.state.sets.map((x, j) => j === i ? [x[0], +e.target.value] : x) }),
     }));
     const finish = () => {
       const cur = this.state;
-      const played = cur.sets.filter(s => s[0] >= 0 && s[1] >= 0 && s[0] !== s[1]);
+      const rawRows = cur.sets.filter(s => s[0] >= 0 && s[1] >= 0 && s[0] !== s[1]);
+      const isTB = cur.decider !== 'set' && rawRows.length === 3 && cur.sets[2][0] >= 0 && cur.sets[2][1] >= 0 && cur.sets[2][0] !== cur.sets[2][1];
+      const tbRaw = isTB ? [cur.sets[2][0], cur.sets[2][1]] : null;
+      const played = isTB ? [rawRows[0], rawRows[1], (tbRaw[0] > tbRaw[1] ? [1, 0] : [0, 1])] : rawRows;
       let sa = 0, sb = 0, ga = 0, gb = 0;
       played.forEach(([a, b]) => { ga += a; gb += b; a > b ? sa++ : sb++; });
       if (!played.length || sa === sb) { set({ scoreErr: 'Enter a decisive score — one side must take more sets. Tied or empty sets are ignored.' }); return; }
       const A = dbl ? [cur.a1, cur.a2] : [cur.a1], B = dbl ? [cur.b1, cur.b2] : [cur.b1];
       const win = sa > sb ? 'a' : 'b';
       const winIds = win === 'a' ? A : B, loseIds = win === 'a' ? B : A;
-      const scoreStr = played.map(([a, b]) => (win === 'a' ? a + '\u2013' + b : b + '\u2013' + a)).join(', ');
+      const scoreStr = played.map(([a, b], k) => {
+        const tbk = tbRaw && k === 2;
+        const src = tbk ? tbRaw : [a, b];
+        const s0 = win === 'a' ? src[0] + '\u2013' + src[1] : src[1] + '\u2013' + src[0];
+        return tbk ? '[' + s0 + ']' : s0;
+      }).join(', ');
       const today = new Date().toISOString().slice(0, 10);
       const usedOpt = this.startOpt(cur.startUsed);
       const startLabel = usedOpt.d !== null ? usedOpt.label + ' (as played)' : (odds ? odds.start + (odds.codesShort || '') : 'Level');
       const match = {
         id: 'm' + Date.now(), d: today, type: cur.mType, a: A, b: B, sets: played, win,
         start: startLabel, startUsed: cur.startUsed,
-        format: cur.mFormat, scoring: cur.mScoring, outcome: cur.mOutcome, mv: '',
+        format: cur.mFormat, scoring: cur.mScoring, outcome: cur.mOutcome, tb: tbRaw, mv: '',
       };
       const key = dbl ? 'hcpD' : 'hcp';
       const before = {};
@@ -1184,7 +1210,7 @@ class Component extends DCLogic {
         },
       });
     };
-    const resetMatch = () => set({ phase: 'setup', a1: '', a2: '', b1: '', b2: '', mType: 'singles', startUsed: 'auto', mFormat: 'bo3', mScoring: 'point', mOutcome: 'complete', sets: [[-1, -1], [-1, -1], [-1, -1]], scoreErr: '', result: null });
+    const resetMatch = () => set({ phase: 'setup', a1: '', a2: '', b1: '', b2: '', mType: 'singles', startUsed: 'auto', decider: 'set', mFormat: 'bo3', mScoring: 'point', mOutcome: 'complete', sets: [[-1, -1], [-1, -1], [-1, -1]], scoreErr: '', result: null });
     const addPlayer = () => {
       const name = this.state.addName.trim(), h = parseFloat(this.state.addHcp);
       if (!name || isNaN(h)) return;
@@ -1322,7 +1348,7 @@ class Component extends DCLogic {
       backToSetup: () => set({ phase: 'setup' }),
       rubric, codes: this.CODES,
       vsLine: (st.a1 ? this.names(dbl ? [st.a1, st.a2].filter(Boolean) : [st.a1]) : 'Side A') + '  vs  ' + (st.b1 ? this.names(dbl ? [st.b1, st.b2].filter(Boolean) : [st.b1]) : 'Side B'),
-      setsView, gameNums: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+      setsView,
       scoreErr: st.scoreErr, scoreErrShow: !!st.scoreErr,
       finish, resetMatch,
       resWinner: st.result ? st.result.winner : '', resLoser: st.result ? st.result.loser : '',
@@ -1340,6 +1366,9 @@ class Component extends DCLogic {
       mFormat: st.mFormat, onMFormat: e => set({ mFormat: e.target.value }),
       mScoring: st.mScoring, onMScoring: e => set({ mScoring: e.target.value }),
       mOutcome: st.mOutcome, onMOutcome: e => set({ mOutcome: e.target.value }),
+      decider: st.decider, onDecider: e => set({ decider: e.target.value }),
+      deciderShow: st.mFormat === 'bo3',
+      deciderOpts: [{ k: 'set', label: 'Full third set' }, { k: 'tb7', label: '7-point match tie-break' }, { k: 'tb10', label: '10-point match tie-break' }],
       adjNote: (() => {
         const c = this.cfg();
         if (st.mOutcome === 'walkover' || st.mOutcome === 'practice') return 'Recorded only — this will not move either rating.';
