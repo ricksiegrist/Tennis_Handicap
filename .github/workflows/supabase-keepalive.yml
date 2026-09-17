@@ -1,0 +1,17 @@
+yaml
+name: Keep Supabase awake
+
+on:
+  schedule:
+    - cron: '0 14 */2 * *'   # every other day at 14:00 UTC
+  workflow_dispatch:          # lets you run it manually
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Query Supabase
+        run: |
+          curl --fail -sS \
+            "${{ secrets.SUPABASE_URL }}/rest/v1/players?select=*&limit=1" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}"
