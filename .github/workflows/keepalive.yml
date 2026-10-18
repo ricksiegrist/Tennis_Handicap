@@ -1,0 +1,51 @@
+name: Supabase keep-alive
+
+on:
+  schedule:
+    - cron: '0 6 * * 1,4'   # Mondays and Thursdays, 06:00 UTC
+  workflow_dispatch:         # adds a "Run workflow" button for testing
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    env:
+      URL: https://uncbwavesacjiieggpbj.supabase.co/rest/v1/club_data
+      KEY: sb_publishable_rJEm7eyai20_SmEl90hYyA_lyC27d8l
+    steps:
+      - name: Add, save, then delete player "test" (rating 60)
+        run: |
+          set -euo pipefail
+
+          get() {
+            curl -sf "$URL?id=eq.brighton&select=data" -H "apikey: $KEY" | jq -e '.[0].data | select(.players != null)'
+          }
+          put() {
+            jq -c '[{id: "brighton", data: ., updated_at: (now | todate)}]' |
+              curl -sf -X POST "$URL?on_conflict=id" \
+                -H "apikey: $KEY" \
+                -H "Content-Type: application/json" \
+                -H "Prefer: resolution=merge-duplicates" \
+                --data-binary @- > /dev/null
+          }
+
+          PID="keepalive_$(date +%s)"
+          TODAY=$(date -u +%F)
+
+          # 1. Add and save
+          get | jq --arg id "$PID" --arg d "$TODAY" '
+            .players += [{
+              id: $id, name: "test", hcp: 60, hcpD: 60, pm: 0,
+              hist: [{d: $d, label: "Keep-alive test player", delta: 0, after: 60}]
+            }]' | put
+          echo "Added test player $PID"
+
+          sleep 5
+
+          # 2. Delete — re-read first so nothing saved by a phone in between is lost.
+          #    Also removes any keep-alive player left over from a failed earlier run.
+          get | jq '.players |= map(select((.id | startswith("keepalive_")) | not))' | put
+          echo "Deleted test player"
+
+          # 3. Confirm it is gone
+          get | jq -e '[.players[] | select(.id | startswith("keepalive_"))] | length == 0' > /dev/null
+          echo "Confirmed: roster is back to normal"
